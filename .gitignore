@@ -1,0 +1,144 @@
+# Build directories
+build/
+bin/
+lib/
+out/
+.build/
+cmake-build-*/
+
+# IDE files
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Compiler generated files
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.pdb
+*.idb
+*.ilk
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# vcpkg
+vcpkg_installed/
+.vcpkg-root
+
+# Testing
+Testing/
+CTestTestfile.cmake
+test_results.xml
+*.gcov
+*.gcda
+*.gcno
+coverage.info
+coverage/
+
+# Logs and runtime files
+logs/
+*.log
+*.log.*
+core
+core.*
+
+# Configuration overrides
+config/local.json
+config/override.json
+config/secrets.json
+.env
+.env.local
+
+# Package managers
+conan/
+node_modules/
+.conan/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.#*
+\#*#
+
+# Documentation generated files
+docs/html/
+docs/latex/
+docs/xml/
+Doxyfile.bak
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Archive files
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+
+# Profiling and debugging
+*.prof
+*.trace
+perf.data*
+callgrind.out.*
+massif.out.*
+
+# Static analysis
+cppcheck.xml
+scan-build-*/
+
+# Benchmarking results
+benchmark_results/
+*.benchmark
+
+# Custom ignores for integrated thread system
+# Submodule build artifacts (they have their own .gitignore)
+external/*/build/
+external/*/bin/
+external/*/lib/
+
+# Runtime data
+data/
+cache/
+metrics/
+monitoring/
+
+# Security keys and certificates
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
+
+# Local development files
+local_config/
+dev_scripts/
+scratch/

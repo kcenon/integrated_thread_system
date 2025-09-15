@@ -1,0 +1,197 @@
+{
+  "integrated_thread_system": {
+    "version": "1.0.0",
+    "profile": "development",
+    "deployment_environment": "development",
+    "systems": {
+      "thread_system": {
+        "enabled": true,
+        "thread_pools": {
+          "default": {
+            "workers": 4,
+            "queue_type": "standard",
+            "batch_processing": false,
+            "enable_performance_monitoring": true,
+            "debug_mode": true
+          }
+        },
+        "performance_tuning": {
+          "cpu_affinity": false,
+          "memory_pools": false,
+          "numa_awareness": false
+        },
+        "debugging": {
+          "detailed_logging": true,
+          "task_tracing": true,
+          "performance_profiling": true
+        }
+      },
+      "logger_system": {
+        "enabled": true,
+        "level": "debug",
+        "async_mode": false,
+        "buffer_size": 8192,
+        "flush_interval_ms": 100,
+        "structured_logging": false,
+        "writers": {
+          "console": {
+            "enabled": true,
+            "level": "debug",
+            "colors": true,
+            "timestamp": true,
+            "thread_id": true,
+            "source_location": true
+          },
+          "file": {
+            "enabled": true,
+            "level": "trace",
+            "path": "logs/debug.log",
+            "rotation": {
+              "enabled": true,
+              "max_size": "10MB",
+              "max_files": 5,
+              "compress": false
+            }
+          },
+          "callback": {
+            "enabled": true,
+            "level": "error",
+            "immediate_flush": true
+          }
+        },
+        "performance": {
+          "queue_size": 10000,
+          "thread_count": 1,
+          "batch_size": 10
+        },
+        "debugging": {
+          "log_queue_stats": true,
+          "log_writer_performance": true,
+          "track_message_lifecycle": true
+        }
+      },
+      "monitoring_system": {
+        "enabled": true,
+        "collection_interval": "500ms",
+        "retention_period": "1h",
+        "storage": {
+          "type": "memory",
+          "max_samples": 7200
+        },
+        "web_dashboard": {
+          "enabled": true,
+          "bind_address": "127.0.0.1",
+          "port": 3000,
+          "auth": {
+            "enabled": false
+          },
+          "tls": {
+            "enabled": false
+          },
+          "cors": {
+            "enabled": true,
+            "origins": ["http://localhost:3000", "http://127.0.0.1:3000"]
+          },
+          "development": {
+            "hot_reload": true,
+            "debug_mode": true,
+            "verbose_logging": true
+          }
+        },
+        "alerting": {
+          "enabled": false,
+          "check_interval": "10s",
+          "rules": {
+            "development_test": {
+              "condition": "cpu_usage > 95",
+              "duration": "1m",
+              "severity": "warning",
+              "channels": ["console"]
+            }
+          },
+          "channels": {
+            "console": {
+              "enabled": true,
+              "level": "debug"
+            },
+            "email": {
+              "enabled": false
+            }
+          }
+        },
+        "collectors": {
+          "system_resources": {
+            "enabled": true,
+            "interval": "1s",
+            "detailed_metrics": true
+          },
+          "thread_pool_metrics": {
+            "enabled": true,
+            "interval": "500ms",
+            "per_worker_stats": true
+          },
+          "logger_metrics": {
+            "enabled": true,
+            "interval": "1s",
+            "per_writer_stats": true
+          },
+          "custom_metrics": {
+            "enabled": true,
+            "interval": "5s"
+          }
+        },
+        "export": {
+          "prometheus": {
+            "enabled": true,
+            "endpoint": "/metrics",
+            "port": 9090
+          },
+          "json_api": {
+            "enabled": true,
+            "endpoint": "/api/metrics",
+            "pretty_print": true
+          }
+        },
+        "debugging": {
+          "metric_validation": true,
+          "collection_timing": true,
+          "storage_stats": true
+        }
+      }
+    },
+    "integration": {
+      "health_checks": {
+        "enabled": true,
+        "interval": "10s",
+        "timeout": "2s",
+        "endpoints": {
+          "readiness": "/health/ready",
+          "liveness": "/health/live",
+          "debug": "/health/debug"
+        }
+      },
+      "graceful_shutdown": {
+        "enabled": true,
+        "timeout": "10s",
+        "signals": ["SIGTERM", "SIGINT"]
+      },
+      "resource_limits": {
+        "max_memory_mb": 512,
+        "max_threads": 32,
+        "max_open_files": 1024
+      },
+      "development": {
+        "auto_reload_config": true,
+        "detailed_error_messages": true,
+        "performance_warnings": true,
+        "memory_leak_detection": true
+      },
+      "debugging": {
+        "component_startup_order": true,
+        "dependency_resolution": true,
+        "configuration_validation": true,
+        "integration_timing": true
+      }
+    }
+  }
+}

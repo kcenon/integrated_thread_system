@@ -1,0 +1,4 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/integrated_thread_system_targets.cmake")
+check_required_components(integrated_thread_system)

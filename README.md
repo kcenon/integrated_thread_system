@@ -68,10 +68,10 @@ ctest --verbose
 ### Basic Usage
 
 ```cpp
-#include "application_framework.h"
+#include <kcenon/integrated/framework/application.h>
 #include <iostream>
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated::framework;
 
 int main() {
     // Create application with default configuration

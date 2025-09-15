@@ -1,0 +1,83 @@
+{
+  "application": {
+    "name": "Integrated Thread System Application",
+    "version": "1.0.0",
+    "environment": "development"
+  },
+  "thread_system": {
+    "enabled": true,
+    "thread_pools": {
+      "default": {
+        "worker_count": "auto",
+        "queue_type": "adaptive",
+        "batch_size": 100,
+        "max_queue_size": 10000
+      },
+      "io": {
+        "worker_count": 4,
+        "queue_type": "priority",
+        "dedicated": true
+      }
+    }
+  },
+  "logger_system": {
+    "enabled": true,
+    "level": "info",
+    "structured": true,
+    "async": true,
+    "writers": [
+      {
+        "type": "console",
+        "colored": true
+      },
+      {
+        "type": "file",
+        "path": "logs/app.log",
+        "rotation": {
+          "max_size": "100MB",
+          "max_files": 10
+        }
+      }
+    ],
+    "formatters": {
+      "default": "json"
+    }
+  },
+  "monitoring_system": {
+    "enabled": true,
+    "collectors": {
+      "system": {
+        "enabled": true,
+        "interval": "1s"
+      },
+      "application": {
+        "enabled": true,
+        "interval": "5s"
+      }
+    },
+    "exporters": [
+      {
+        "type": "prometheus",
+        "endpoint": "/metrics",
+        "port": 9090
+      }
+    ],
+    "web_dashboard": {
+      "enabled": true,
+      "port": 8080,
+      "refresh_interval": "1s"
+    },
+    "alerting": {
+      "enabled": true,
+      "rules": [
+        {
+          "name": "high_cpu",
+          "metric": "cpu_usage",
+          "threshold": 80,
+          "duration": "5m",
+          "severity": "warning"
+        }
+      ]
+    }
+  }
+}

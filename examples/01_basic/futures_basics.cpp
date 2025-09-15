@@ -11,7 +11,7 @@
 #include <vector>
 #include "unified_thread_system.h"
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated;
 using namespace std::chrono_literals;
 
 int main() {

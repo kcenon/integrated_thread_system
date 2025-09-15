@@ -8,7 +8,7 @@
 #include <iostream>
 #include "unified_thread_system.h"
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated;
 
 int main() {
     std::cout << "=== Hello Thread Example ===" << std::endl;

@@ -21,7 +21,7 @@
 #include <future>
 #include <iomanip>
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated;
 
 // Define custom job types for priority-based scheduling
 enum class job_priority {

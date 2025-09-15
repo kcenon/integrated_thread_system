@@ -12,7 +12,7 @@
 #include <chrono>
 #include <numeric>
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated;
 
 int main() {
     std::cout << "=== Unified Thread System - Simple Usage ===\n\n";

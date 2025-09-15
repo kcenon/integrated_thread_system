@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <atomic>
 #include <random>
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated;
 using namespace std::chrono_literals;
 
 /**

@@ -12,7 +12,7 @@
 #include <chrono>
 #include <random>
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated;
 
 int main() {
     std::cout << "=== Integrated Thread System - Basic Example ===" << std::endl;

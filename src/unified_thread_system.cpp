@@ -9,7 +9,7 @@
 #include <future>
 #include <thread>
 
-namespace integrated_thread_system {
+namespace kcenon::integrated {
 
 class unified_thread_system::impl {
 private:
@@ -198,4 +198,4 @@ template void unified_thread_system::log<std::string>(log_level, const std::stri
 template void unified_thread_system::log<const char*>(log_level, const std::string&, const char*&&);
 template void unified_thread_system::log<size_t>(log_level, const std::string&, size_t&&);
 
-} // namespace integrated_thread_system
+} // namespace kcenon::integrated

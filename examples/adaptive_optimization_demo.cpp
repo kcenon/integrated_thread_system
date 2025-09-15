@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <thread>
 #include <vector>
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated;
 using namespace std::chrono_literals;
 
 /**

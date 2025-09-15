@@ -11,7 +11,7 @@
  * - Real-world usage scenarios
  */
 
-#include "../include/unified_thread_system.h"
+#include <unified_thread_system.h>
 #include <iostream>
 #include <vector>
 #include <chrono>

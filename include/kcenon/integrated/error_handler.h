@@ -14,7 +14,7 @@
 #include <vector>
 #include <kcenon/thread/core/event_bus.h>
 #include <kcenon/thread/core/configuration_manager.h>
-#include <kcenon/logger/interfaces/logger_interface.h>
+#include <kcenon/thread/interfaces/logger_interface.h>
 
 namespace kcenon::integrated {
 

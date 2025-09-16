@@ -28,12 +28,30 @@ jobs:
       with:
         submodules: true
 
-    - name: Setup and install vcpkg dependencies
-      uses: lukka/run-vcpkg@v11
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      id: vcpkg-cache
       with:
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-        runVcpkgInstall: true
-        vcpkgJsonGlob: '**/vcpkg.json'
+        path: |
+          ${{ github.workspace }}/vcpkg
+          !${{ github.workspace }}/vcpkg/buildtrees
+          !${{ github.workspace }}/vcpkg/packages
+          !${{ github.workspace }}/vcpkg/downloads
+        key: ${{ runner.os }}-security-vcpkg-${{ hashFiles('vcpkg.json') }}
+
+    - name: Set up vcpkg
+      run: |
+        if [ ! -d "vcpkg" ]; then
+          git clone https://github.com/Microsoft/vcpkg.git
+        fi
+        cd vcpkg
+        git pull
+        ./bootstrap-vcpkg.sh
+        cd ..
+
+    - name: Install dependencies for security scan
+      run: |
+        ./vcpkg/vcpkg install --x-manifest-root=. --triplet x64-linux
 
     - name: Dependency vulnerability scan
       uses: aquasecurity/trivy-action@master

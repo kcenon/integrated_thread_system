@@ -5,6 +5,7 @@
 
 #include "unified_thread_system.h"
 
+#if EXTERNAL_SYSTEMS_AVAILABLE
 // Forward declarations to avoid header conflicts
 namespace kcenon::thread { class thread_pool; }
 namespace kcenon::logger { class logger; }
@@ -12,6 +13,7 @@ namespace monitoring_system {
     class performance_monitor;
     class system_resource_collector;
 }
+#endif
 
 #include <iostream>
 #include <memory>
@@ -38,6 +40,12 @@ public:
 
 private:
     void initialize_systems() {
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        std::cout << "Initializing with external systems integration..." << std::endl;
+#else
+        std::cout << "Initializing in headers-only mode..." << std::endl;
+#endif
+
         // Initialize logger system first
         if (config_.enable_console_logging || config_.enable_file_logging) {
             try {

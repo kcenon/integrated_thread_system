@@ -13,9 +13,12 @@
 
 ## 📖 Documentation
 
-- **[API Documentation](https://kcenon.github.io/integrated_thread_system/)**: Auto-generated Doxygen documentation
-- **[Getting Started Guide](#-quick-start)**: Step-by-step setup and usage
-- **[Architecture Overview](#️-system-architecture)**: System design and integration patterns
+- **[📚 Complete Documentation](docs/)**: Comprehensive documentation organized by category
+- **[🔗 API Documentation](https://kcenon.github.io/integrated_thread_system/)**: Auto-generated Doxygen documentation
+- **[🏗️ Architecture](docs/architecture/)**: System design and architectural documentation
+- **[🔧 Development Guides](docs/development/)**: Build scripts and integration guides
+- **[🚀 Getting Started](docs/getting_started/)**: Quick start tutorials and basic setup
+- **[📖 User Guides](docs/guides/)**: Detailed usage guides and best practices
 
 ## 🌟 Overview
 

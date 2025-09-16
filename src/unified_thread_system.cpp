@@ -19,6 +19,10 @@ namespace monitoring_system {
 #include <memory>
 #include <future>
 #include <thread>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
+#include <functional>
 
 namespace kcenon::integrated {
 
@@ -28,6 +32,13 @@ private:
     std::unique_ptr<std::thread> thread_pool_wrapper_;
     bool logger_initialized_{false};
     bool monitoring_initialized_{false};
+
+    // Simple thread pool implementation
+    std::vector<std::thread> workers_;
+    std::queue<std::function<void()>> tasks_;
+    std::mutex queue_mutex_;
+    std::condition_variable condition_;
+    bool stop_{false};
 
 public:
     explicit impl(const config& cfg) : config_(cfg) {
@@ -56,9 +67,27 @@ private:
             }
         }
 
-        // Initialize thread pool with simple wrapper
+        // Initialize thread pool with actual workers
         try {
             const size_t thread_count = config_.thread_count == 0 ? std::thread::hardware_concurrency() : config_.thread_count;
+
+            // Create worker threads
+            for (size_t i = 0; i < thread_count; ++i) {
+                workers_.emplace_back([this] {
+                    for (;;) {
+                        std::function<void()> task;
+                        {
+                            std::unique_lock<std::mutex> lock(queue_mutex_);
+                            condition_.wait(lock, [this] { return stop_ || !tasks_.empty(); });
+                            if (stop_ && tasks_.empty()) return;
+                            task = std::move(tasks_.front());
+                            tasks_.pop();
+                        }
+                        task();
+                    }
+                });
+            }
+
             std::cout << "Thread pool initialized with " << thread_count << " threads" << std::endl;
         } catch (const std::exception& e) {
             std::cerr << "Failed to initialize thread pool: " << e.what() << std::endl;
@@ -80,6 +109,18 @@ private:
             std::cout << "Shutting down unified thread system" << std::endl;
         }
 
+        // Shutdown thread pool
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex_);
+            stop_ = true;
+        }
+        condition_.notify_all();
+        for (std::thread &worker : workers_) {
+            if (worker.joinable()) {
+                worker.join();
+            }
+        }
+
         // Shutdown in reverse order
         monitoring_initialized_ = false;
         thread_pool_wrapper_.reset();
@@ -88,29 +129,37 @@ private:
 
 public:
 
-    // Thread system operations - simplified implementation
+    // Thread system operations - actual thread pool implementation
     template<typename F, typename... Args>
     auto submit(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
-        if (logger_initialized_) {
-            std::cout << "[DEBUG] Submitting task to thread pool" << std::endl;
+        using return_type = std::invoke_result_t<F, Args...>;
+
+        auto task = std::make_shared<std::packaged_task<return_type()>>(
+            std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+        );
+
+        std::future<return_type> result = task->get_future();
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex_);
+            if (stop_) {
+                throw std::runtime_error("submit on stopped ThreadPool");
+            }
+            tasks_.emplace([task]() { (*task)(); });
         }
-        return std::async(std::launch::async, std::forward<F>(f), std::forward<Args>(args)...);
+        condition_.notify_one();
+        return result;
     }
 
     template<typename F, typename... Args>
     auto submit_critical(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
-        if (logger_initialized_) {
-            std::cout << "[DEBUG] Submitting critical task to thread pool" << std::endl;
-        }
-        return std::async(std::launch::async, std::forward<F>(f), std::forward<Args>(args)...);
+        // Critical tasks use the same pool but could have priority in a full implementation
+        return submit(std::forward<F>(f), std::forward<Args>(args)...);
     }
 
     template<typename F, typename... Args>
     auto submit_background(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
-        if (logger_initialized_) {
-            std::cout << "[DEBUG] Submitting background task to thread pool" << std::endl;
-        }
-        return std::async(std::launch::deferred, std::forward<F>(f), std::forward<Args>(args)...);
+        // Background tasks use the same pool but could have lower priority in a full implementation
+        return submit(std::forward<F>(f), std::forward<Args>(args)...);
     }
 
     // Logger system operations - simplified implementation

@@ -11,7 +11,7 @@
  * - Real-world usage scenarios
  */
 
-#include "../include/unified_thread_system.h"
+#include <unified_thread_system.h>
 #include <iostream>
 #include <vector>
 #include <chrono>
@@ -21,7 +21,7 @@
 #include <future>
 #include <iomanip>
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated;
 
 // Define custom job types for priority-based scheduling
 enum class job_priority {

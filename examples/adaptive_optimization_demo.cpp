@@ -30,7 +30,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *****************************************************************************/
 
-#include "../include/unified_thread_system.h"
+#include <unified_thread_system.h>
 #include <iostream>
 #include <chrono>
 #include <atomic>
@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <thread>
 #include <vector>
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated;
 using namespace std::chrono_literals;
 
 /**

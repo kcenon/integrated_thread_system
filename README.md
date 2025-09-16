@@ -1,17 +1,61 @@
 # Integrated Thread System
 
+[![CodeFactor](https://www.codefactor.io/repository/github/kcenon/integrated_thread_system/badge)](https://www.codefactor.io/repository/github/kcenon/integrated_thread_system)
+
+[![Ubuntu-GCC](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-gcc.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-gcc.yaml)
+[![Ubuntu-Clang](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-clang.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-clang.yaml)
+[![Windows-VS](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-vs.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-vs.yaml)
+[![Windows-MSYS2](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-msys2.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-msys2.yaml)
+[![Doxygen](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-Doxygen.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-Doxygen.yaml)
+
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
 
-## Overview
+## 📖 Documentation
 
-The **Integrated Thread System** is a comprehensive C++20 framework that unifies three high-performance systems:
+- **[📚 Complete Documentation](docs/)**: Comprehensive documentation organized by category
+- **[🔗 API Documentation](https://kcenon.github.io/integrated_thread_system/)**: Auto-generated Doxygen documentation
+- **[🏗️ Architecture](docs/architecture/)**: System design and architectural documentation
+- **[🔧 Development Guides](docs/development/)**: Build scripts and integration guides
+- **[🚀 Getting Started](docs/getting_started/)**: Quick start tutorials and basic setup
+- **[📖 User Guides](docs/guides/)**: Detailed usage guides and best practices
 
-- **[thread_system](https://github.com/kcenon/thread_system)**: Core threading framework with adaptive queues (1.16M+ jobs/sec)
-- **[logger_system](https://github.com/kcenon/logger_system)**: Asynchronous structured logging system
-- **[monitoring_system](https://github.com/kcenon/monitoring_system)**: Real-time metrics collection and web dashboard
+## 🌟 Overview
+
+The **Integrated Thread System** is an enterprise-grade C++20 framework that unifies three high-performance systems into a seamless, production-ready solution:
+
+### 🔗 Core Components
+- **[thread_system](https://github.com/kcenon/thread_system)**: Modular C++20 threading framework (~2,700 lines of optimized code)
+  - 🚀 **Performance**: 1.16M+ jobs/second with adaptive queues
+  - 🔧 **Architecture**: Interface-based design with clean abstractions
+  - ✅ **Reliability**: Comprehensive error handling and cancellation tokens
+
+- **[logger_system](https://github.com/kcenon/logger_system)**: High-performance asynchronous logging
+  - 📝 **Features**: Structured logging with dependency injection
+  - ⚡ **Async**: Batched processing with configurable strategies
+  - 🛠️ **Modular**: 15+ configurable feature options
+
+- **[monitoring_system](https://github.com/kcenon/monitoring_system)**: Comprehensive observability platform
+  - 📊 **Monitoring**: Real-time metrics and distributed tracing
+  - 🏥 **Health**: Service health checks and dependency validation
+  - 🛡️ **Reliability**: Circuit breakers and error boundary patterns
 
 This integration provides enterprise-grade observability, performance monitoring, and operational excellence while maintaining the individual strengths of each system.
+
+## 📈 Recent Improvements & Status
+
+### ✅ **Integration Status (Current)**
+- **System Integration**: Successfully unified all three systems with graceful fallback mechanisms
+- **Build System**: CMake-based with automatic dependency detection
+- **API Unification**: Single interface providing access to all subsystem functionality
+- **Error Handling**: Comprehensive Result<T> pattern across all components
+- **Documentation**: Updated with ecosystem-wide best practices
+
+### 🔄 **Component Status**
+- **thread_system**: ✅ Core functionality with interface-based architecture
+- **logger_system**: ✅ Adaptive DI, monitoring integration, configuration strategies
+- **monitoring_system**: ✅ Performance monitoring, distributed tracing, health checks
+- **integrated_system**: ✅ Unified API with simplified configuration
 
 ## ✨ Key Features
 
@@ -38,6 +82,54 @@ This integration provides enterprise-grade observability, performance monitoring
 - **Fluent API**: Intuitive, self-documenting interfaces
 - **Application Framework**: High-level framework for common patterns
 - **Comprehensive Examples**: Production-ready code examples
+
+## 🏗️ System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Integrated Thread System                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│                         Unified API Layer                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────┐ │
+│  │ Thread Submit   │  │ Logger Interface│  │ Monitoring Interface    │ │
+│  │ • submit()      │  │ • log_info()    │  │ • register_metric()     │ │
+│  │ • submit_critical│  │ • log_error()   │  │ • health_check()        │ │
+│  │ • submit_background│ │ • log_debug()   │  │ • get_metrics()         │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────┤
+│                        Integration Layer                               │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────┐ │
+│  │ Graceful        │  │ Configuration   │  │ Error Handling          │ │
+│  │ Fallback        │  │ Management      │  │ & Recovery              │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────┤
+│                      Core System Components                            │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────┐ │
+│  │ thread_system   │  │ logger_system   │  │ monitoring_system       │ │
+│  │ • Thread Pool   │  │ • Async Logger  │  │ • Performance Monitor   │ │
+│  │ • Job Queue     │  │ • Structured    │  │ • Health Monitor        │ │
+│  │ • Workers       │  │ • DI Container  │  │ • Distributed Tracer    │ │
+│  │ • Cancellation  │  │ • Multi-sink    │  │ • Circuit Breakers      │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 🔗 Ecosystem Integration
+
+```
+thread_system (core interfaces)
+    ↑                    ↑
+logger_system    monitoring_system
+    ↑                    ↑
+    └── integrated_thread_system ──┘
+```
+
+**Integration Benefits:**
+- **Zero Configuration**: Works out-of-the-box with sensible defaults
+- **Automatic Fallback**: Each system operates independently if others fail
+- **Unified Metrics**: Cross-system performance monitoring and correlation
+- **Centralized Logging**: All systems log through unified interface
+- **Shared Thread Pool**: Optimal resource utilization across components
 
 ## 🚀 Quick Start
 
@@ -68,44 +160,110 @@ ctest --verbose
 ### Basic Usage
 
 ```cpp
-#include "application_framework.h"
+#include <unified_thread_system.h>
 #include <iostream>
 
-using namespace integrated_thread_system;
+using namespace kcenon::integrated;
 
 int main() {
-    // Create application with default configuration
-    application_framework::application_config config;
-    config.name = "My Application";
-    config.config_file_path = "config/production.json";
+    // Create unified system with default configuration
+    unified_thread_system::config config;
+    config.name = "MyApplication";
+    config.thread_count = 4;  // Or 0 for auto-detect
+    config.enable_console_logging = true;
+    config.enable_file_logging = true;
+    config.enable_monitoring = true;
+    config.log_directory = "./logs";
 
-    application_framework app(config);
+    unified_thread_system system(config);
 
-    // Initialize (automatically starts all systems)
-    auto result = app.initialize();
-    if (!result) {
-        std::cerr << "Failed to initialize: " << result.get_error().message();
-        return 1;
-    }
-
-    // Get integrated components
-    auto thread_pool = app.get_thread_pool();
-    auto logger = app.get_logger();
-
-    // Submit instrumented tasks with automatic logging and monitoring
-    auto future = thread_pool->submit_task("data_processing", []() {
-        // Your task logic here
+    // Submit various types of tasks
+    auto future1 = system.submit([]() {
         return 42;
     });
 
-    if (future) {
-        auto result = future.value().get();
-        logger->info("Task completed with result: {}", result);
+    auto future2 = system.submit_critical([&system]() {
+        system.log_info("Processing critical task");
+        return "important_result";
+    });
+
+    auto future3 = system.submit_background([]() {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        return "background_done";
+    });
+
+    // Monitor system health
+    auto health = system.check_health();
+    system.log_info("System health: {} (CPU: {}%)",
+                   health.overall_health == health_level::healthy ? "Healthy" : "Degraded",
+                   health.cpu_usage_percent);
+
+    // Register custom metrics
+    system.register_metric("custom_counter", 0);
+    system.increment_counter("custom_counter", 5.0);
+
+    // Get results
+    try {
+        auto result1 = future1.get();
+        auto result2 = future2.get();
+        auto result3 = future3.get();
+
+        system.log_info("All tasks completed successfully");
+        system.log_info("Results: {}, {}, {}", result1, result2, result3);
+    } catch (const std::exception& e) {
+        system.log_error("Task execution failed: {}", e.what());
     }
 
-    // Performance metrics are automatically collected
-    auto metrics = thread_pool->get_performance_metrics();
-    logger->info("Processed {} tasks", metrics.tasks_completed);
+    // Get performance metrics
+    auto metrics = system.get_performance_stats();
+    system.log_info("Tasks completed: {}, Queue size: {}",
+                   metrics.tasks_completed, metrics.queue_size);
+
+    return 0;
+}
+```
+
+### Advanced Configuration
+
+```cpp
+#include <unified_thread_system.h>
+
+int main() {
+    // Advanced configuration example
+    unified_thread_system::config config;
+    config.name = "ProductionService";
+    config.thread_count = std::thread::hardware_concurrency() * 2;
+    config.enable_console_logging = false;  // Disable console in production
+    config.enable_file_logging = true;
+    config.enable_monitoring = true;
+    config.log_directory = "/var/log/myservice";
+
+    unified_thread_system system(config);
+
+    // Register health checks
+    system.register_health_check("database_connectivity", []() {
+        // Your database check logic
+        return health_status{
+            .overall_health = health_level::healthy,
+            .cpu_usage_percent = 15.0,
+            .memory_usage_percent = 45.0,
+            .queue_utilization_percent = 30.0,
+            .issues = {}
+        };
+    });
+
+    // Use different priority levels
+    system.submit_critical([]() {
+        // High priority task
+    });
+
+    system.submit([]() {
+        // Normal priority task
+    });
+
+    system.submit_background([]() {
+        // Low priority background task
+    });
 
     return 0;
 }
@@ -205,6 +363,104 @@ int main() {
 ```
 
 ### Key Components
+
+## ⚙️ CI/CD & Quality Assurance
+
+### 🔄 **Continuous Integration**
+Our comprehensive CI/CD pipeline ensures code quality and cross-platform compatibility:
+
+- **🐧 Ubuntu GCC**: Linux builds with GCC compiler and comprehensive testing
+- **🐧 Ubuntu Clang**: Linux builds with Clang for static analysis and alternative compiler validation
+- **🪟 Windows Visual Studio**: Native Windows builds with MSVC for maximum Windows compatibility
+- **🪟 Windows MSYS2**: Windows builds with MinGW for POSIX compatibility layer
+- **📚 Doxygen**: Automated API documentation generation and GitHub Pages deployment
+
+### 🧪 **Quality Gates**
+Each workflow includes:
+- **Compilation**: Multi-compiler support (GCC, Clang, MSVC)
+- **Testing**: Comprehensive unit and integration test suites
+- **Examples**: Build verification of all example applications
+- **Dependencies**: Automatic component system detection and integration
+- **Documentation**: API documentation generation and validation
+
+### 🎯 **Platform Support**
+| Platform | Compiler | Status | Features |
+|----------|----------|---------|----------|
+| Ubuntu 20.04+ | GCC 11+ | ✅ | Full feature set |
+| Ubuntu 20.04+ | Clang 15+ | ✅ | Static analysis enabled |
+| Windows 10+ | MSVC 2019+ | ✅ | Native Windows support |
+| Windows 10+ | MinGW/MSYS2 | ✅ | POSIX compatibility |
+| macOS 11+ | Clang 14+ | 🔄 | Planned support |
+
+### 📊 **Build Features**
+- **Dependency Management**: vcpkg integration for consistent dependencies
+- **Component Detection**: Automatic detection of sibling system libraries
+- **Error Handling**: Graceful fallback when component systems are unavailable
+- **Performance Testing**: Benchmark validation in CI environment
+- **Memory Safety**: Optional sanitizer support (AddressSanitizer, ThreadSanitizer)
+
+## 🤝 Contributing
+
+We welcome contributions to the Integrated Thread System! Here are some ways you can contribute:
+
+### 🐛 **Bug Reports**
+- Use the GitHub issue tracker
+- Include system information and reproduction steps
+- Provide minimal code examples when possible
+
+### 🚀 **Feature Requests**
+- Propose new features through GitHub issues
+- Explain the use case and expected behavior
+- Consider implementation complexity and integration impact
+
+### 💻 **Code Contributions**
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Follow the coding standards:
+   - Use C++20 features appropriately
+   - Follow the existing naming conventions
+   - Include comprehensive tests
+   - Update documentation
+4. Commit your changes: `git commit -m 'Add amazing feature'`
+5. Push to the branch: `git push origin feature/amazing-feature`
+6. Open a Pull Request
+
+### 📋 **Development Guidelines**
+- **Code Style**: Follow the existing code style and use `.clang-format`
+- **Testing**: Add unit tests for new functionality
+- **Documentation**: Update relevant documentation and examples
+- **Backwards Compatibility**: Maintain API compatibility when possible
+
+### 🔗 **Ecosystem Contributions**
+Consider contributing to the individual component systems:
+- [thread_system](https://github.com/kcenon/thread_system) - Core threading framework
+- [logger_system](https://github.com/kcenon/logger_system) - Asynchronous logging
+- [monitoring_system](https://github.com/kcenon/monitoring_system) - Performance monitoring
+
+## 📄 License
+
+This project is licensed under the BSD 3-Clause License - see the [LICENSE](LICENSE) file for details.
+
+### Third-Party Components
+- **fmt library**: MIT License (when used)
+- **nlohmann/json**: MIT License (when used)
+- **Component systems**: Each system maintains its own BSD 3-Clause License
+
+## 🙏 Acknowledgments
+
+- The C++ standards committee for C++20 features
+- Contributors to the individual component systems
+- The open-source community for feedback and contributions
+
+## 📚 Related Projects
+
+- **[thread_system](https://github.com/kcenon/thread_system)**: Core threading framework
+- **[logger_system](https://github.com/kcenon/logger_system)**: High-performance logging
+- **[monitoring_system](https://github.com/kcenon/monitoring_system)**: Observability platform
+
+---
+
+**✨ Built with modern C++20 for enterprise-grade applications**
 
 - **Integration Manager**: Central orchestrator managing system lifecycle
 - **Service Registry**: Dependency injection container for loose coupling

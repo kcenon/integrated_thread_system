@@ -1,0 +1,66 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+  "name": "integrated-thread-system",
+  "version": "1.0.0",
+  "description": "Enterprise-grade unified threading framework with logging and monitoring",
+  "homepage": "https://github.com/kcenon/integrated_thread_system",
+  "documentation": "https://github.com/kcenon/integrated_thread_system/tree/main/docs",
+  "supports": "!(uwp | xbox)",
+  "dependencies": [
+    "fmt",
+    "nlohmann-json"
+  ],
+  "features": {
+    "testing": {
+      "description": "Build with testing support",
+      "dependencies": [
+        "gtest",
+        "gmock"
+      ]
+    },
+    "benchmarking": {
+      "description": "Build with benchmarking support",
+      "dependencies": [
+        "benchmark"
+      ]
+    },
+    "web-dashboard": {
+      "description": "Enable web dashboard functionality",
+      "dependencies": [
+        "restinio",
+        "websocketpp",
+        "openssl"
+      ]
+    },
+    "network-logging": {
+      "description": "Enable network logging capabilities",
+      "dependencies": [
+        "asio"
+      ]
+    },
+    "database-storage": {
+      "description": "Enable database storage for metrics and logs",
+      "dependencies": [
+        "sqlite3",
+        "postgresql"
+      ]
+    },
+    "cloud-integration": {
+      "description": "Enable cloud service integrations",
+      "dependencies": [
+        {
+          "name": "aws-sdk-cpp",
+          "features": ["s3", "cloudwatch", "logs"]
+        }
+      ]
+    },
+    "compression": {
+      "description": "Enable compression for logs and metrics",
+      "dependencies": [
+        "lz4",
+        "zstd",
+        "snappy"
+      ]
+    }
+  }
+}

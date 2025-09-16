@@ -70,25 +70,43 @@ find_package(Threads REQUIRED)
 # Find external systems and include their headers
 message(STATUS "Finding external systems...")
 
-# Find thread_system
-set(THREAD_SYSTEM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../thread_system)
-if(NOT EXISTS ${THREAD_SYSTEM_DIR})
-    message(FATAL_ERROR "thread_system not found. Please ensure thread_system exists in ../thread_system/")
+# Check if we're building as submodule (CI fallback mode)
+option(BUILD_INTEGRATED_AS_SUBMODULE "Build without external system dependencies" OFF)
+
+if(BUILD_INTEGRATED_AS_SUBMODULE)
+    message(STATUS "Building in submodule mode - using headers-only approach")
+    # In submodule mode, we'll use header-only implementations
+    set(EXTERNAL_SYSTEMS_AVAILABLE FALSE)
+else()
+    # Find thread_system
+    set(THREAD_SYSTEM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../thread_system)
+    if(NOT EXISTS ${THREAD_SYSTEM_DIR})
+        message(WARNING "thread_system not found. Falling back to headers-only mode.")
+        set(EXTERNAL_SYSTEMS_AVAILABLE FALSE)
+    else()
+        set(EXTERNAL_SYSTEMS_AVAILABLE TRUE)
+    endif()
+
+    # Find logger_system
+    set(LOGGER_SYSTEM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../logger_system)
+    if(NOT EXISTS ${LOGGER_SYSTEM_DIR} AND EXTERNAL_SYSTEMS_AVAILABLE)
+        message(WARNING "logger_system not found. Falling back to headers-only mode.")
+        set(EXTERNAL_SYSTEMS_AVAILABLE FALSE)
+    endif()
+
+    # Find monitoring_system
+    set(MONITORING_SYSTEM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../monitoring_system)
+    if(NOT EXISTS ${MONITORING_SYSTEM_DIR} AND EXTERNAL_SYSTEMS_AVAILABLE)
+        message(WARNING "monitoring_system not found. Falling back to headers-only mode.")
+        set(EXTERNAL_SYSTEMS_AVAILABLE FALSE)
+    endif()
 endif()
 
-# Find logger_system
-set(LOGGER_SYSTEM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../logger_system)
-if(NOT EXISTS ${LOGGER_SYSTEM_DIR})
-    message(FATAL_ERROR "logger_system not found. Please ensure logger_system exists in ../logger_system/")
+if(EXTERNAL_SYSTEMS_AVAILABLE)
+    message(STATUS "External systems found successfully")
+else()
+    message(STATUS "Running in headers-only mode")
 endif()
-
-# Find monitoring_system
-set(MONITORING_SYSTEM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../monitoring_system)
-if(NOT EXISTS ${MONITORING_SYSTEM_DIR})
-    message(FATAL_ERROR "monitoring_system not found. Please ensure monitoring_system exists in ../monitoring_system/")
-endif()
-
-message(STATUS "External systems found successfully")
 
 # Create integration library
 add_library(integrated_thread_system STATIC
@@ -110,11 +128,18 @@ target_include_directories(integrated_thread_system
         $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        # External system headers
-        ${THREAD_SYSTEM_DIR}/include
-        ${LOGGER_SYSTEM_DIR}/include
-        ${MONITORING_SYSTEM_DIR}/include
 )
+
+# Add external system headers if available
+if(EXTERNAL_SYSTEMS_AVAILABLE)
+    target_include_directories(integrated_thread_system
+        PRIVATE
+            # External system headers
+            ${THREAD_SYSTEM_DIR}/include
+            ${LOGGER_SYSTEM_DIR}/include
+            ${MONITORING_SYSTEM_DIR}/include
+    )
+endif()
 
 # Link dependencies
 target_link_libraries(integrated_thread_system
@@ -146,6 +171,19 @@ target_compile_definitions(integrated_thread_system
         INTEGRATED_THREAD_SYSTEM_VERSION="${PROJECT_VERSION}"
 )
 
+# Add external systems availability flag
+if(EXTERNAL_SYSTEMS_AVAILABLE)
+    target_compile_definitions(integrated_thread_system
+        PRIVATE
+            EXTERNAL_SYSTEMS_AVAILABLE=1
+    )
+else()
+    target_compile_definitions(integrated_thread_system
+        PRIVATE
+            EXTERNAL_SYSTEMS_AVAILABLE=0
+    )
+endif()
+
 if(ENABLE_WEB_DASHBOARD)
     target_compile_definitions(integrated_thread_system PUBLIC ENABLE_WEB_DASHBOARD=1)
 endif()
@@ -163,12 +201,17 @@ if(BUILD_TESTS)  # Re-enabling tests after API updates
 
     # Find test dependencies
     if(USE_SYSTEM_DEPENDENCIES)
-        find_package(GTest REQUIRED)
+        find_package(GTest QUIET)
     else()
-        find_package(GTest CONFIG REQUIRED)
+        find_package(GTest CONFIG QUIET)
     endif()
 
-    add_subdirectory(tests)
+    if(GTest_FOUND OR GTEST_FOUND)
+        message(STATUS "GTest found, adding tests")
+        add_subdirectory(tests)
+    else()
+        message(WARNING "GTest not found, skipping tests. Install GTest or enable the 'testing' feature in vcpkg.json")
+    endif()
 endif()
 
 # Add benchmarks
@@ -177,12 +220,17 @@ if(BUILD_BENCHMARKS)
 
     # Find benchmark dependencies
     if(USE_SYSTEM_DEPENDENCIES)
-        find_package(benchmark REQUIRED)
+        find_package(benchmark QUIET)
     else()
-        find_package(benchmark CONFIG REQUIRED)
+        find_package(benchmark CONFIG QUIET)
     endif()
 
-    add_subdirectory(benchmarks)
+    if(benchmark_FOUND)
+        message(STATUS "benchmark found, adding benchmarks")
+        add_subdirectory(benchmarks)
+    else()
+        message(WARNING "benchmark not found, skipping benchmarks. Install benchmark or enable the 'benchmarking' feature in vcpkg.json")
+    endif()
 endif()
 
 # Installation

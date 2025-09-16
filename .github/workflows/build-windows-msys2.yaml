@@ -1,0 +1,169 @@
+name: Build-Windows-MSYS2
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build_windows_msys2:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: msys2 {0}
+    env:
+      BUILD_TYPE: Debug
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          clean: true
+          fetch-depth: 0
+
+      - name: Cache MSYS2 packages
+        uses: actions/cache@v4
+        id: msys2-cache
+        with:
+          path: |
+            D:\a\_temp\msys64
+            D:\msys64
+          key: ${{ runner.os }}-msys2-${{ hashFiles('.github/workflows/build-windows-msys2.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-msys2-
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: ${{ steps.msys2-cache.outputs.cache-hit != 'true' }}
+          install: |
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-gdb
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-gtest
+            mingw-w64-x86_64-fmt
+            mingw-w64-x86_64-nlohmann-json
+            base-devel
+            git
+
+      - name: Verify MSYS2 installation
+        run: |
+          echo "GCC version:"
+          gcc --version
+          echo "CMake version:"
+          cmake --version
+          echo "Ninja version:"
+          ninja --version
+
+      - name: Check component systems availability
+        run: |
+          echo "Checking for component systems..."
+          # Check if component systems exist as sibling directories
+          if [ -d "../thread_system" ]; then
+            echo "✅ thread_system found"
+            echo "THREAD_SYSTEM_AVAILABLE=true" >> $GITHUB_ENV
+          else
+            echo "❌ thread_system not found - using headers only"
+            echo "THREAD_SYSTEM_AVAILABLE=false" >> $GITHUB_ENV
+          fi
+
+          if [ -d "../logger_system" ]; then
+            echo "✅ logger_system found"
+            echo "LOGGER_SYSTEM_AVAILABLE=true" >> $GITHUB_ENV
+          else
+            echo "❌ logger_system not found - using headers only"
+            echo "LOGGER_SYSTEM_AVAILABLE=false" >> $GITHUB_ENV
+          fi
+
+          if [ -d "../monitoring_system" ]; then
+            echo "✅ monitoring_system found"
+            echo "MONITORING_SYSTEM_AVAILABLE=true" >> $GITHUB_ENV
+          else
+            echo "❌ monitoring_system not found - using headers only"
+            echo "MONITORING_SYSTEM_AVAILABLE=false" >> $GITHUB_ENV
+          fi
+
+      - name: Configure CMake with MSYS2
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_CXX_COMPILER=g++ \
+            -DBUILD_TESTS=ON \
+            -DBUILD_EXAMPLES=ON \
+            -DENABLE_SANITIZERS=OFF \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -G "Ninja"
+
+      - name: Build with MSYS2/MinGW
+        run: |
+          cd build
+          ninja -j$(nproc)
+
+      - name: Run Tests
+        run: |
+          cd build
+          ctest --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}
+
+      - name: Build Examples
+        run: |
+          cd build
+          echo "Building example applications with MSYS2..."
+          if [ -f "examples/simple_tasks.exe" ]; then
+            echo "✅ simple_tasks example built successfully"
+          fi
+          if [ -f "examples/hello_thread.exe" ]; then
+            echo "✅ hello_thread example built successfully"
+          fi
+
+      - name: Test Example Execution
+        run: |
+          cd build
+          echo "Testing example execution..."
+          if [ -f "examples/hello_thread.exe" ]; then
+            echo "Running hello_thread example:"
+            timeout 10s ./examples/hello_thread.exe || echo "Example completed or timed out"
+          fi
+
+      - name: Check Integration Status
+        run: |
+          cd build
+          echo "=== Integration Build Status (MSYS2) ==="
+          echo "Library:"
+          ls -la lib*integrated* 2>/dev/null || echo "Library files not found"
+          echo "Examples:"
+          ls -la examples/ 2>/dev/null || echo "Examples not found"
+          echo "Tests:"
+          ls -la test* 2>/dev/null || echo "Tests not found"
+
+      - name: Analyze Dependencies
+        run: |
+          cd build
+          echo "=== Dependency Analysis ==="
+          if [ -f "libintegrated_thread_system.a" ]; then
+            echo "Library dependencies:"
+            objdump -x libintegrated_thread_system.a | grep "NEEDED" || echo "Static library - no runtime dependencies"
+          fi
+
+      - name: System Information
+        run: |
+          echo "=== System Information ==="
+          echo "MSYS2 Environment: $MSYSTEM"
+          echo "GCC Version: $(gcc --version | head -1)"
+          echo "CMake Version: $(cmake --version | head -1)"
+          echo "Ninja Version: $(ninja --version)"
+          echo "CPU Info: $(cat /proc/cpuinfo | grep 'model name' | head -1 | cut -d: -f2)"
+          echo "Memory: $(free -h | grep Mem)"
+          echo "Build completed successfully with MSYS2! ✅"

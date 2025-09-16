@@ -244,11 +244,16 @@ public:
         return config_;
     }
 
-    // Internal task submission
+    // Internal task submission - uses the thread pool
     void submit_internal(std::function<void()> task) {
-        // Simple async execution for now - store future to avoid warning
-        auto future = std::async(std::launch::async, std::move(task));
-        // Let future destruct automatically
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex_);
+            if (stop_) {
+                throw std::runtime_error("submit on stopped ThreadPool");
+            }
+            tasks_.emplace(std::move(task));
+        }
+        condition_.notify_one();
     }
 
     // Internal logging

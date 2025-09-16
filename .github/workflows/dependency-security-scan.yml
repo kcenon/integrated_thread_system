@@ -51,7 +51,12 @@ jobs:
 
     - name: Install dependencies for security scan
       run: |
-        ./vcpkg/vcpkg install --x-manifest-root=. --triplet x64-linux
+        if [ "${{ steps.vcpkg-cache.outputs.cache-hit }}" != "true" ]; then
+          echo "🔄 Installing vcpkg dependencies for security scan..."
+          ./vcpkg/vcpkg install --x-manifest-root=. --triplet x64-linux
+        else
+          echo "📋 Using cached vcpkg packages for security scan"
+        fi
 
     - name: Dependency vulnerability scan
       uses: aquasecurity/trivy-action@master

@@ -37,21 +37,34 @@ jobs:
         with:
           arch: x64
 
-      - name: Cache vcpkg
+      - name: Cache vcpkg tool
         uses: actions/cache@v4
-        id: vcpkg-cache
+        id: vcpkg-tool-cache
         with:
           path: |
             ${{ github.workspace }}/vcpkg
             !${{ github.workspace }}/vcpkg/buildtrees
             !${{ github.workspace }}/vcpkg/packages
             !${{ github.workspace }}/vcpkg/downloads
-          key: ${{ runner.os }}-vs-vcpkg-${{ hashFiles('vcpkg.json') }}
+            !${{ github.workspace }}/vcpkg/installed
+          key: ${{ runner.os }}-vcpkg-tool-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-vs-vcpkg-
+            ${{ runner.os }}-vcpkg-tool-
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        id: vcpkg-packages-cache
+        with:
+          path: |
+            ${{ github.workspace }}/vcpkg/installed
+            ${{ github.workspace }}/vcpkg/packages
+          key: ${{ runner.os }}-vs-vcpkg-packages-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vs-vcpkg-packages-
+            ${{ runner.os }}-vcpkg-packages-
 
       - name: Setup vcpkg
-        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+        if: steps.vcpkg-tool-cache.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/Microsoft/vcpkg.git
           cd vcpkg

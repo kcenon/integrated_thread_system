@@ -26,9 +26,23 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        id: apt-cache
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/build-Doxygen.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install Doxygen and dependencies
         run: |
-          sudo apt update
+          # Only update if cache miss
+          if [ "${{ steps.apt-cache.outputs.cache-hit }}" != "true" ]; then
+            sudo apt update
+          fi
           sudo apt install -y doxygen graphviz
           # Install additional tools for enhanced documentation
           sudo apt install -y texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra
@@ -53,6 +67,15 @@ jobs:
             echo "❌ Doxyfile not found, creating default configuration"
             echo "DOXYFILE_EXISTS=false" >> $GITHUB_ENV
           fi
+
+      - name: Cache Doxygen output
+        uses: actions/cache@v4
+        id: doxygen-cache
+        with:
+          path: docs/doxygen
+          key: ${{ runner.os }}-doxygen-${{ hashFiles('src/**', 'include/**', 'README.md', 'Doxyfile*') }}
+          restore-keys: |
+            ${{ runner.os }}-doxygen-
 
       - name: Create default Doxyfile if needed
         if: env.DOXYFILE_EXISTS == 'false'
@@ -235,6 +258,7 @@ jobs:
           EOF
 
       - name: Generate Documentation
+        if: steps.doxygen-cache.outputs.cache-hit != 'true'
         run: |
           echo "Generating Doxygen documentation..."
           if [ -n "${{ env.DOXYFILE_PATH }}" ]; then
@@ -242,6 +266,12 @@ jobs:
           else
             doxygen Doxyfile
           fi
+
+      - name: Skip documentation generation (cached)
+        if: steps.doxygen-cache.outputs.cache-hit == 'true'
+        run: |
+          echo "📋 Using cached Doxygen documentation"
+          echo "Cache hit - skipping documentation generation"
 
       - name: Check generated documentation
         run: |

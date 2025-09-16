@@ -43,25 +43,47 @@ jobs:
             echo "VCPKG_FORCE_SYSTEM_BINARIES=arm" >> $GITHUB_ENV
           fi
 
-      - name: Cache vcpkg
+      - name: Cache vcpkg tool
         uses: actions/cache@v4
-        id: vcpkg-cache
+        id: vcpkg-tool-cache
         with:
           path: |
             ${{ github.workspace }}/vcpkg
             !${{ github.workspace }}/vcpkg/buildtrees
             !${{ github.workspace }}/vcpkg/packages
             !${{ github.workspace }}/vcpkg/downloads
-          key: ${{ runner.os }}-gcc-vcpkg-${{ hashFiles('vcpkg.json') }}
+            !${{ github.workspace }}/vcpkg/installed
+          key: ${{ runner.os }}-vcpkg-tool-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-tool-
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        id: vcpkg-packages-cache
+        with:
+          path: |
+            ${{ github.workspace }}/vcpkg/installed
+            ${{ github.workspace }}/vcpkg/packages
+          key: ${{ runner.os }}-gcc-vcpkg-packages-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          restore-keys: |
+            ${{ runner.os }}-gcc-vcpkg-packages-
+            ${{ runner.os }}-vcpkg-packages-
 
       - name: Set up vcpkg
         run: |
           if [ ! -d "vcpkg" ]; then
+            echo "🔄 Cloning vcpkg repository..."
             git clone https://github.com/Microsoft/vcpkg.git
           fi
           cd vcpkg
-          git pull
-          ./bootstrap-vcpkg.sh
+          # Only pull and bootstrap if not cached or outdated
+          if [ "${{ steps.vcpkg-tool-cache.outputs.cache-hit }}" != "true" ]; then
+            echo "🔄 Updating vcpkg..."
+            git pull
+            ./bootstrap-vcpkg.sh
+          else
+            echo "📋 Using cached vcpkg tool"
+          fi
           cd ..
 
       - name: Determine vcpkg commit

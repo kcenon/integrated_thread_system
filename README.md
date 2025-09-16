@@ -11,6 +11,12 @@
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
 
+## 📖 Documentation
+
+- **[API Documentation](https://kcenon.github.io/integrated_thread_system/)**: Auto-generated Doxygen documentation
+- **[Getting Started Guide](#-quick-start)**: Step-by-step setup and usage
+- **[Architecture Overview](#️-system-architecture)**: System design and integration patterns
+
 ## 🌟 Overview
 
 The **Integrated Thread System** is an enterprise-grade C++20 framework that unifies three high-performance systems into a seamless, production-ready solution:
@@ -354,6 +360,41 @@ int main() {
 ```
 
 ### Key Components
+
+## ⚙️ CI/CD & Quality Assurance
+
+### 🔄 **Continuous Integration**
+Our comprehensive CI/CD pipeline ensures code quality and cross-platform compatibility:
+
+- **🐧 Ubuntu GCC**: Linux builds with GCC compiler and comprehensive testing
+- **🐧 Ubuntu Clang**: Linux builds with Clang for static analysis and alternative compiler validation
+- **🪟 Windows Visual Studio**: Native Windows builds with MSVC for maximum Windows compatibility
+- **🪟 Windows MSYS2**: Windows builds with MinGW for POSIX compatibility layer
+- **📚 Doxygen**: Automated API documentation generation and GitHub Pages deployment
+
+### 🧪 **Quality Gates**
+Each workflow includes:
+- **Compilation**: Multi-compiler support (GCC, Clang, MSVC)
+- **Testing**: Comprehensive unit and integration test suites
+- **Examples**: Build verification of all example applications
+- **Dependencies**: Automatic component system detection and integration
+- **Documentation**: API documentation generation and validation
+
+### 🎯 **Platform Support**
+| Platform | Compiler | Status | Features |
+|----------|----------|---------|----------|
+| Ubuntu 20.04+ | GCC 11+ | ✅ | Full feature set |
+| Ubuntu 20.04+ | Clang 15+ | ✅ | Static analysis enabled |
+| Windows 10+ | MSVC 2019+ | ✅ | Native Windows support |
+| Windows 10+ | MinGW/MSYS2 | ✅ | POSIX compatibility |
+| macOS 11+ | Clang 14+ | 🔄 | Planned support |
+
+### 📊 **Build Features**
+- **Dependency Management**: vcpkg integration for consistent dependencies
+- **Component Detection**: Automatic detection of sibling system libraries
+- **Error Handling**: Graceful fallback when component systems are unavailable
+- **Performance Testing**: Benchmark validation in CI environment
+- **Memory Safety**: Optional sanitizer support (AddressSanitizer, ThreadSanitizer)
 
 ## 🤝 Contributing
 

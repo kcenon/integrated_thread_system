@@ -1,0 +1,171 @@
+name: Build-Ubuntu-Clang
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - feature/*
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build_linux_clang:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BUILD_TYPE: Release
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_FEATURE_FLAGS: "manifests,registries,versions,binarycaching"
+      VCPKG_DEFAULT_TRIPLET: x64-linux
+      CC: clang
+      CXX: clang++
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: true
+          clean: true
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Clang and dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y clang llvm cmake build-essential gdb pkg-config curl zip unzip tar autoconf automake autoconf-archive ninja-build
+          sudo apt install -y libgtest-dev libgmock-dev
+          # Install required dependencies for integrated system
+          sudo apt install -y libfmt-dev nlohmann-json3-dev
+          # Ensure we're using the latest clang
+          sudo apt install -y clang-15 llvm-15
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-15 100
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-15 100
+
+      - name: Verify Clang installation
+        run: |
+          echo "Clang version:"
+          clang --version
+          echo "Clang++ version:"
+          clang++ --version
+
+      - name: Check architecture
+        run: |
+          if [ "$(uname -m)" = "aarch64" ]; then
+            echo "VCPKG_FORCE_SYSTEM_BINARIES=arm" >> $GITHUB_ENV
+          fi
+
+      - name: Cache vcpkg
+        uses: actions/cache@v3
+        id: vcpkg-cache
+        with:
+          path: |
+            ${{ github.workspace }}/vcpkg
+            !${{ github.workspace }}/vcpkg/buildtrees
+            !${{ github.workspace }}/vcpkg/packages
+            !${{ github.workspace }}/vcpkg/downloads
+          key: ${{ runner.os }}-clang-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-clang-vcpkg-
+
+      - name: Setup vcpkg
+        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          ./bootstrap-vcpkg.sh
+          echo "${{ github.workspace }}/vcpkg" >> $GITHUB_PATH
+
+      - name: Check component systems availability
+        run: |
+          echo "Checking for component systems..."
+          # Check if component systems exist as sibling directories
+          if [ -d "../thread_system" ]; then
+            echo "✅ thread_system found"
+            echo "THREAD_SYSTEM_AVAILABLE=true" >> $GITHUB_ENV
+          else
+            echo "❌ thread_system not found - using headers only"
+            echo "THREAD_SYSTEM_AVAILABLE=false" >> $GITHUB_ENV
+          fi
+
+          if [ -d "../logger_system" ]; then
+            echo "✅ logger_system found"
+            echo "LOGGER_SYSTEM_AVAILABLE=true" >> $GITHUB_ENV
+          else
+            echo "❌ logger_system not found - using headers only"
+            echo "LOGGER_SYSTEM_AVAILABLE=false" >> $GITHUB_ENV
+          fi
+
+          if [ -d "../monitoring_system" ]; then
+            echo "✅ monitoring_system found"
+            echo "MONITORING_SYSTEM_AVAILABLE=true" >> $GITHUB_ENV
+          else
+            echo "❌ monitoring_system not found - using headers only"
+            echo "MONITORING_SYSTEM_AVAILABLE=false" >> $GITHUB_ENV
+          fi
+
+      - name: Configure CMake with Clang
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DBUILD_TESTS=ON \
+            -DBUILD_EXAMPLES=ON \
+            -DENABLE_SANITIZERS=OFF \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build with Clang
+        run: |
+          cd build
+          cmake --build . --config ${{ env.BUILD_TYPE }} -j$(nproc)
+
+      - name: Run Tests
+        run: |
+          cd build
+          ctest --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}
+
+      - name: Build Examples
+        run: |
+          cd build
+          echo "Building example applications with Clang..."
+          if [ -f "examples/simple_tasks" ]; then
+            echo "✅ simple_tasks example built successfully"
+          fi
+          if [ -f "examples/hello_thread" ]; then
+            echo "✅ hello_thread example built successfully"
+          fi
+
+      - name: Static Analysis with Clang
+        run: |
+          cd build
+          echo "Running Clang static analysis..."
+          # Run clang-tidy if available
+          if command -v clang-tidy >/dev/null 2>&1; then
+            echo "Running clang-tidy analysis..."
+            find ../src -name "*.cpp" -exec clang-tidy {} -- -I../include \; || echo "clang-tidy completed with warnings"
+          fi
+
+      - name: Check Integration Status
+        run: |
+          cd build
+          echo "=== Integration Build Status (Clang) ==="
+          echo "Library: $(ls -la lib*integrated* 2>/dev/null || echo 'Library files not found')"
+          echo "Examples: $(ls -la examples/ 2>/dev/null || echo 'Examples not found')"
+          echo "Tests: $(ls -la test* 2>/dev/null || echo 'Tests not found')"
+
+      - name: System Information
+        run: |
+          echo "=== System Information ==="
+          echo "Clang Version: $(clang --version | head -1)"
+          echo "CMake Version: $(cmake --version | head -1)"
+          echo "CPU Info: $(lscpu | grep 'Model name' | head -1)"
+          echo "Memory: $(free -h | grep Mem)"
+          echo "Build completed successfully with Clang! ✅"

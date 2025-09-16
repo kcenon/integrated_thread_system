@@ -1,0 +1,313 @@
+name: Build-Doxygen
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  doxygen:
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: true
+          clean: true
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Doxygen and dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y doxygen graphviz
+          # Install additional tools for enhanced documentation
+          sudo apt install -y texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra
+
+      - name: Verify Doxygen installation
+        run: |
+          echo "Doxygen version:"
+          doxygen --version
+          echo "Graphviz version:"
+          dot -V
+
+      - name: Check for Doxyfile
+        run: |
+          if [ -f "Doxyfile" ]; then
+            echo "✅ Doxyfile found"
+            echo "DOXYFILE_EXISTS=true" >> $GITHUB_ENV
+          elif [ -f "docs/Doxyfile" ]; then
+            echo "✅ Doxyfile found in docs/"
+            echo "DOXYFILE_EXISTS=true" >> $GITHUB_ENV
+            echo "DOXYFILE_PATH=docs/Doxyfile" >> $GITHUB_ENV
+          else
+            echo "❌ Doxyfile not found, creating default configuration"
+            echo "DOXYFILE_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Create default Doxyfile if needed
+        if: env.DOXYFILE_EXISTS == 'false'
+        run: |
+          echo "Creating default Doxygen configuration..."
+          cat > Doxyfile << 'EOF'
+          PROJECT_NAME           = "Integrated Thread System"
+          PROJECT_NUMBER         = "1.0.0"
+          PROJECT_BRIEF          = "Enterprise-grade C++20 unified threading framework"
+
+          OUTPUT_DIRECTORY       = docs/doxygen
+          CREATE_SUBDIRS         = YES
+
+          INPUT                  = src include README.md
+          RECURSIVE              = YES
+          FILE_PATTERNS          = *.cpp *.h *.hpp *.md
+          EXCLUDE_PATTERNS       = */build/* */.*
+
+          GENERATE_HTML          = YES
+          HTML_OUTPUT            = html
+          HTML_FILE_EXTENSION    = .html
+          HTML_HEADER            =
+          HTML_FOOTER            =
+          HTML_STYLESHEET        =
+          HTML_EXTRA_STYLESHEET  =
+          HTML_EXTRA_FILES       =
+          HTML_COLORSTYLE_HUE    = 220
+          HTML_COLORSTYLE_SAT    = 100
+          HTML_COLORSTYLE_GAMMA  = 80
+          HTML_TIMESTAMP         = YES
+          HTML_DYNAMIC_SECTIONS  = YES
+          HTML_INDEX_NUM_ENTRIES = 100
+
+          GENERATE_LATEX         = NO
+
+          EXTRACT_ALL            = YES
+          EXTRACT_PRIVATE        = NO
+          EXTRACT_PACKAGE        = NO
+          EXTRACT_STATIC         = YES
+          EXTRACT_LOCAL_CLASSES  = YES
+          EXTRACT_LOCAL_METHODS  = NO
+          EXTRACT_ANON_NSPACES   = NO
+
+          HIDE_UNDOC_MEMBERS     = NO
+          HIDE_UNDOC_CLASSES     = NO
+          HIDE_FRIEND_COMPOUNDS  = NO
+          HIDE_IN_BODY_DOCS      = NO
+
+          CASE_SENSE_NAMES       = YES
+          HIDE_SCOPE_NAMES       = NO
+          HIDE_COMPOUND_REFERENCE= NO
+          SHOW_INCLUDE_FILES     = YES
+          SHOW_GROUPED_MEMB_INC  = NO
+          FORCE_LOCAL_INCLUDES   = NO
+          INLINE_INFO            = YES
+          SORT_MEMBER_DOCS       = YES
+          SORT_BRIEF_DOCS        = NO
+          SORT_MEMBERS_CTORS_1ST = NO
+          SORT_GROUP_NAMES       = NO
+          SORT_BY_SCOPE_NAME     = NO
+
+          GENERATE_TODOLIST      = YES
+          GENERATE_TESTLIST      = YES
+          GENERATE_BUGLIST       = YES
+          GENERATE_DEPRECATEDLIST= YES
+
+          ENABLED_SECTIONS       =
+          MAX_INITIALIZER_LINES  = 30
+          SHOW_USED_FILES        = YES
+          SHOW_FILES             = YES
+          SHOW_NAMESPACES        = YES
+
+          QUIET                  = NO
+          WARNINGS               = YES
+          WARN_IF_UNDOCUMENTED   = YES
+          WARN_IF_DOC_ERROR      = YES
+          WARN_NO_PARAMDOC       = NO
+          WARN_AS_ERROR          = NO
+          WARN_FORMAT            = "$file:$line: $text"
+          WARN_LOGFILE           =
+
+          SOURCE_BROWSER         = NO
+          INLINE_SOURCES         = NO
+          STRIP_CODE_COMMENTS    = YES
+          REFERENCED_BY_RELATION = NO
+          REFERENCES_RELATION    = NO
+          REFERENCES_LINK_SOURCE = YES
+          SOURCE_TOOLTIPS        = YES
+          USE_HTAGS              = NO
+          VERBATIM_HEADERS       = YES
+          CLANG_ASSISTED_PARSING = NO
+          CLANG_OPTIONS          =
+
+          ALPHABETICAL_INDEX     = YES
+          COLS_IN_ALPHA_INDEX    = 5
+          IGNORE_PREFIX          =
+
+          GENERATE_TREEVIEW      = NO
+          ENUM_VALUES_PER_LINE   = 4
+          TREEVIEW_WIDTH         = 250
+          EXT_LINKS_IN_WINDOW    = NO
+
+          FORMULA_FONTSIZE       = 10
+          FORMULA_TRANSPARENT    = YES
+
+          USE_MATHJAX            = NO
+          MATHJAX_FORMAT         = HTML-CSS
+          MATHJAX_RELPATH        = http://cdn.mathjax.org/mathjax/latest
+          MATHJAX_EXTENSIONS     =
+          MATHJAX_CODEFILE       =
+
+          SEARCHENGINE           = YES
+          SERVER_BASED_SEARCH    = NO
+          EXTERNAL_SEARCH        = NO
+          SEARCHENGINE_URL       =
+          SEARCHDATA_FILE        = searchdata.xml
+          EXTERNAL_SEARCH_ID     =
+          EXTRA_SEARCH_MAPPINGS  =
+
+          GENERATE_QHP           = NO
+          GENERATE_ECLIPSEHELP   = NO
+          GENERATE_DOCSET        = NO
+          GENERATE_CHI           = NO
+          GENERATE_XML           = NO
+          GENERATE_DOCBOOK       = NO
+          GENERATE_AUTOGEN_DEF   = NO
+          GENERATE_PERLMOD       = NO
+
+          ENABLE_PREPROCESSING   = YES
+          MACRO_EXPANSION        = NO
+          EXPAND_ONLY_PREDEF     = NO
+          SEARCH_INCLUDES        = YES
+          INCLUDE_PATH           =
+          INCLUDE_FILE_PATTERNS  =
+          PREDEFINED             =
+          EXPAND_AS_DEFINED      =
+          SKIP_FUNCTION_MACROS   = YES
+
+          ALLEXTERNALS           = NO
+          EXTERNAL_GROUPS        = YES
+          EXTERNAL_PAGES         = YES
+          PERL_PATH              = /usr/bin/perl
+
+          CLASS_DIAGRAMS         = YES
+          MSCGEN_PATH            =
+          DIA_PATH               =
+          HIDE_UNDOC_RELATIONS   = YES
+          HAVE_DOT               = YES
+          DOT_NUM_THREADS        = 0
+          DOT_FONTNAME           = Helvetica
+          DOT_FONTSIZE           = 10
+          DOT_FONTPATH           =
+          CLASS_GRAPH            = YES
+          COLLABORATION_GRAPH    = YES
+          GROUP_GRAPHS           = YES
+          UML_LOOK               = NO
+          UML_LIMIT_NUM_FIELDS   = 10
+          TEMPLATE_RELATIONS     = NO
+          INCLUDE_GRAPH          = YES
+          INCLUDED_BY_GRAPH      = YES
+          CALL_GRAPH             = NO
+          CALLER_GRAPH           = NO
+          GRAPHICAL_HIERARCHY    = YES
+          DIRECTORY_GRAPH        = YES
+          DOT_IMAGE_FORMAT       = png
+          INTERACTIVE_SVG        = NO
+          DOT_PATH               =
+          DOTFILE_DIRS           =
+          MSCFILE_DIRS           =
+          DIAFILE_DIRS           =
+          PLANTUML_JAR_PATH      =
+          PLANTUML_CFG_FILE      =
+          PLANTUML_INCLUDE_PATH  =
+          DOT_GRAPH_MAX_NODES    = 50
+          MAX_DOT_GRAPH_DEPTH    = 0
+          DOT_TRANSPARENT        = NO
+          DOT_MULTI_TARGETS      = NO
+          GENERATE_LEGEND        = YES
+          DOT_CLEANUP            = YES
+          EOF
+
+      - name: Generate Documentation
+        run: |
+          echo "Generating Doxygen documentation..."
+          if [ -n "${{ env.DOXYFILE_PATH }}" ]; then
+            doxygen ${{ env.DOXYFILE_PATH }}
+          else
+            doxygen Doxyfile
+          fi
+
+      - name: Check generated documentation
+        run: |
+          echo "=== Documentation Generation Status ==="
+          if [ -d "docs/doxygen/html" ]; then
+            echo "✅ HTML documentation generated successfully"
+            echo "Files generated:"
+            ls -la docs/doxygen/html/ | head -10
+            echo "Total files: $(find docs/doxygen/html -type f | wc -l)"
+          else
+            echo "❌ HTML documentation not found"
+            echo "Available directories:"
+            find . -type d -name "*doxygen*" -o -name "*html*" 2>/dev/null || echo "No documentation directories found"
+          fi
+
+      - name: Create documentation index
+        run: |
+          if [ -d "docs/doxygen/html" ]; then
+            echo "Creating documentation index..."
+            cat > docs/doxygen/html/README.md << 'EOF'
+          # Integrated Thread System Documentation
+
+          This directory contains the automatically generated API documentation for the Integrated Thread System.
+
+          ## Quick Links
+          - [Main Documentation](index.html)
+          - [Class List](annotated.html)
+          - [File List](files.html)
+          - [Namespace List](namespaces.html)
+
+          ## About
+          The Integrated Thread System is an enterprise-grade C++20 framework that unifies three high-performance systems:
+          - thread_system: Core threading framework
+          - logger_system: Asynchronous logging
+          - monitoring_system: Performance monitoring
+
+          Generated on: $(date)
+          EOF
+          fi
+
+      - name: Setup Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v3
+
+      - name: Upload documentation
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: docs/doxygen/html
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+      - name: Documentation Summary
+        run: |
+          echo "=== Documentation Summary ==="
+          if [ -d "docs/doxygen/html" ]; then
+            echo "✅ Documentation generated successfully"
+            echo "📁 Total files: $(find docs/doxygen/html -type f | wc -l)"
+            echo "📊 HTML files: $(find docs/doxygen/html -name "*.html" | wc -l)"
+            echo "🖼️ Images: $(find docs/doxygen/html -name "*.png" -o -name "*.gif" -o -name "*.svg" | wc -l)"
+            if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              echo "🌐 Documentation will be available at: https://${{ github.repository_owner }}.github.io/integrated_thread_system/"
+            fi
+          else
+            echo "❌ Documentation generation failed"
+          fi

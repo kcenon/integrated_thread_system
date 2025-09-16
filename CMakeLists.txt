@@ -201,12 +201,17 @@ if(BUILD_TESTS)  # Re-enabling tests after API updates
 
     # Find test dependencies
     if(USE_SYSTEM_DEPENDENCIES)
-        find_package(GTest REQUIRED)
+        find_package(GTest QUIET)
     else()
-        find_package(GTest CONFIG REQUIRED)
+        find_package(GTest CONFIG QUIET)
     endif()
 
-    add_subdirectory(tests)
+    if(GTest_FOUND OR GTEST_FOUND)
+        message(STATUS "GTest found, adding tests")
+        add_subdirectory(tests)
+    else()
+        message(WARNING "GTest not found, skipping tests. Install GTest or enable the 'testing' feature in vcpkg.json")
+    endif()
 endif()
 
 # Add benchmarks
@@ -215,12 +220,17 @@ if(BUILD_BENCHMARKS)
 
     # Find benchmark dependencies
     if(USE_SYSTEM_DEPENDENCIES)
-        find_package(benchmark REQUIRED)
+        find_package(benchmark QUIET)
     else()
-        find_package(benchmark CONFIG REQUIRED)
+        find_package(benchmark CONFIG QUIET)
     endif()
 
-    add_subdirectory(benchmarks)
+    if(benchmark_FOUND)
+        message(STATUS "benchmark found, adding benchmarks")
+        add_subdirectory(benchmarks)
+    else()
+        message(WARNING "benchmark not found, skipping benchmarks. Install benchmark or enable the 'benchmarking' feature in vcpkg.json")
+    endif()
 endif()
 
 # Installation

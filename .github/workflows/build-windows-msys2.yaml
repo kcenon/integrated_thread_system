@@ -4,12 +4,9 @@ on:
   push:
     branches:
       - main
-      - develop
-      - feature/*
   pull_request:
     branches:
       - main
-      - develop
   workflow_dispatch:
 
 jobs:
@@ -22,15 +19,13 @@ jobs:
       run:
         shell: msys2 {0}
     env:
-      BUILD_TYPE: Release
+      BUILD_TYPE: Debug
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          persist-credentials: true
           clean: true
-          fetch-depth: 1
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2

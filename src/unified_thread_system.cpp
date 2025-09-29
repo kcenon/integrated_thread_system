@@ -269,6 +269,7 @@ public:
             case log_level::warning: level_str = "WARNING"; break;
             case log_level::error: level_str = "ERROR"; break;
             case log_level::critical: level_str = "CRITICAL"; break;
+            case log_level::fatal: level_str = "FATAL"; break;
         }
 
         std::cout << "[" << level_str << "] " << message << std::endl;

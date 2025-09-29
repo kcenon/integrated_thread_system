@@ -1,8 +1,30 @@
 /**
  * @file hello_thread.cpp
  * @brief The simplest possible example - Hello World with threads
- * @difficulty Beginner
- * @time 2 minutes
+ * @author kcenon <kcenon@gmail.com>
+ * @date 2024
+ *
+ * @details This example demonstrates the most basic usage of the Integrated Thread System.
+ * It shows how to create a thread system with zero configuration, submit a simple task,
+ * and retrieve the result using futures.
+ *
+ * @par Difficulty
+ * Beginner
+ *
+ * @par Time to Complete
+ * 2 minutes
+ *
+ * @par Key Concepts
+ * - Zero-configuration thread system initialization
+ * - Task submission using lambdas
+ * - Future-based result retrieval
+ *
+ * @example
+ * @code{.cpp}
+ * unified_thread_system system;  // Zero configuration!
+ * auto future = system.submit([]() { return 42; });
+ * int result = future.get();     // Get the result
+ * @endcode
  */
 
 #include <iostream>
@@ -10,6 +32,10 @@
 
 using namespace kcenon::integrated;
 
+/**
+ * @brief Main function demonstrating basic thread system usage
+ * @return 0 on success
+ */
 int main() {
     std::cout << "=== Hello Thread Example ===" << std::endl;
 
@@ -32,13 +58,17 @@ int main() {
     return 0;
 }
 
-/*
- * What you learned:
- * 1. How to create a unified_thread_system
- * 2. How to submit a simple task
- * 3. How to get results using futures
+/**
+ * @par What You Learned
+ * -# How to create a unified_thread_system with zero configuration
+ * -# How to submit a simple task using lambda expressions
+ * -# How to retrieve results using std::future
  *
- * Next steps:
- * - Try simple_tasks.cpp for more task examples
- * - Try futures_basics.cpp to learn about futures
+ * @par Next Steps
+ * - Try @ref simple_tasks.cpp for more task examples
+ * - Try @ref futures_basics.cpp to learn about futures in detail
+ * - Try @ref priority_jobs.cpp to learn about priority-based execution
+ *
+ * @see unified_thread_system::submit()
+ * @see std::future
  */

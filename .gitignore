@@ -142,3 +142,6 @@ secrets/
 local_config/
 dev_scripts/
 scratch/
+
+# Documentation output
+documents/

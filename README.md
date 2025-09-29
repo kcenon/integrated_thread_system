@@ -2,8 +2,6 @@
 
 <div align="center">
 
-[![CodeFactor](https://www.codefactor.io/repository/github/kcenon/integrated_thread_system/badge)](https://www.codefactor.io/repository/github/kcenon/integrated_thread_system)
-[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
 
 [![Ubuntu-GCC](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-gcc.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-gcc.yaml)
@@ -464,7 +462,7 @@ BSD 3-Clause License - see [LICENSE](LICENSE) for details.
 
 ## 📬 Contact & Support
 
-- **Author**: Neowine ([@kcenon](https://github.com/kcenon))
+- **Author**: kcenon ([@kcenon](https://github.com/kcenon))
 - **Email**: kcenon@gmail.com
 - **Issues**: [GitHub Issues](https://github.com/kcenon/integrated_thread_system/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/kcenon/integrated_thread_system/discussions)

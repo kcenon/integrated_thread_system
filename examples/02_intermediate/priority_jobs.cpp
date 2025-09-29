@@ -10,7 +10,7 @@
 #include <thread>
 #include <vector>
 #include <atomic>
-#include "unified_thread_system.h"
+#include <kcenon/integrated/unified_thread_system.h>
 
 using namespace kcenon::integrated;
 using namespace std::chrono_literals;

@@ -15,8 +15,9 @@
 
 namespace kcenon::integrated {
 
-using namespace thread;
-using namespace monitoring;
+// Use explicit namespace aliases instead of using directives
+namespace thread_ns = kcenon::thread;
+namespace monitoring_ns = kcenon::monitoring;
 
 /**
  * @brief Aggregated metrics from all systems
@@ -72,14 +73,14 @@ struct aggregated_metrics {
 /**
  * @brief Metrics collection event
  */
-struct metrics_collected_event : event_base {
+struct metrics_collected_event : thread_ns::event_base {
     aggregated_metrics metrics;
     std::string source;
     
     metrics_collected_event(aggregated_metrics m, std::string src)
         : metrics(std::move(m)), source(std::move(src)) {}
     
-    std::string type_name() const override {
+    [[nodiscard]] std::string type_name() const override {
         return "MetricsCollectedEvent";
     }
 };
@@ -87,7 +88,7 @@ struct metrics_collected_event : event_base {
 /**
  * @brief Metrics threshold alert event
  */
-struct metrics_alert_event : event_base {
+struct metrics_alert_event : thread_ns::event_base {
     enum class alert_type {
         cpu_high,
         memory_high,
@@ -104,7 +105,7 @@ struct metrics_alert_event : event_base {
     metrics_alert_event(alert_type t, std::string msg, double current, double thresh)
         : type(t), message(std::move(msg)), current_value(current), threshold(thresh) {}
     
-    std::string type_name() const override {
+    [[nodiscard]] std::string type_name() const override {
         return "MetricsAlertEvent";
     }
 };
@@ -140,10 +141,10 @@ public:
      * @param bus Event bus for notifications
      */
     explicit metrics_aggregator(const config& cfg = {},
-                                std::shared_ptr<event_bus> bus = nullptr)
+                                std::shared_ptr<thread_ns::event_bus> bus = nullptr)
         : config_(cfg), event_bus_(bus) {
         if (!event_bus_) {
-            event_bus_ = std::make_shared<event_bus>();
+            event_bus_ = std::make_shared<thread_ns::event_bus>();
         }
     }
     
@@ -178,7 +179,7 @@ public:
      * @brief Start metrics collection
      * @return True if started successfully
      */
-    bool start() {
+    [[nodiscard]] bool start() {
         if (running_.exchange(true)) {
             return false; // Already running
         }
@@ -202,7 +203,7 @@ public:
      * @brief Check if collecting metrics
      * @return True if running
      */
-    bool is_running() const {
+    [[nodiscard]] bool is_running() const {
         return running_.load();
     }
     
@@ -210,7 +211,7 @@ public:
      * @brief Get current aggregated metrics
      * @return Current metrics
      */
-    aggregated_metrics get_current_metrics() const {
+    [[nodiscard]] aggregated_metrics get_current_metrics() const {
         std::lock_guard<std::mutex> lock(metrics_mutex_);
         if (!metrics_history_.empty()) {
             return metrics_history_.back();
@@ -223,7 +224,7 @@ public:
      * @param duration How far back to retrieve
      * @return Vector of historical metrics
      */
-    std::vector<aggregated_metrics> get_history(
+    [[nodiscard]] std::vector<aggregated_metrics> get_history(
         std::chrono::seconds duration = std::chrono::seconds(3600)) const {
         
         std::lock_guard<std::mutex> lock(metrics_mutex_);
@@ -246,7 +247,7 @@ public:
      * @param duration Time period
      * @return Average metrics
      */
-    aggregated_metrics calculate_average(std::chrono::seconds duration) const {
+    [[nodiscard]] aggregated_metrics calculate_average(std::chrono::seconds duration) const {
         auto history = get_history(duration);
         if (history.empty()) {
             return aggregated_metrics{};
@@ -293,7 +294,7 @@ public:
      * @param metrics Metrics to export
      * @return JSON string
      */
-    std::string export_to_json(const aggregated_metrics& metrics) const {
+    [[nodiscard]] std::string export_to_json(const aggregated_metrics& metrics) const {
         // Simplified JSON export (would use nlohmann::json in production)
         std::stringstream ss;
         ss << "{\n";
@@ -440,7 +441,7 @@ private:
     }
     
     config config_;
-    std::shared_ptr<event_bus> event_bus_;
+    std::shared_ptr<thread_ns::event_bus> event_bus_;
     std::atomic<bool> running_{false};
     std::thread collection_thread_;
     

@@ -53,14 +53,36 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     endif()
 endif()
 
+# Include FetchContent for dependency management
+include(FetchContent)
+
 # Find dependencies
 if(USE_SYSTEM_DEPENDENCIES)
     find_package(fmt REQUIRED)
     find_package(nlohmann_json REQUIRED)
 else()
-    # Use vcpkg
-    find_package(fmt CONFIG REQUIRED)
-    find_package(nlohmann_json CONFIG REQUIRED)
+    # Try to find packages first, fall back to FetchContent if not found
+    find_package(fmt CONFIG QUIET)
+    if(NOT fmt_FOUND)
+        message(STATUS "fmt not found, fetching from GitHub...")
+        FetchContent_Declare(
+            fmt
+            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+            GIT_TAG 10.1.1
+        )
+        FetchContent_MakeAvailable(fmt)
+    endif()
+
+    find_package(nlohmann_json CONFIG QUIET)
+    if(NOT nlohmann_json_FOUND)
+        message(STATUS "nlohmann_json not found, fetching from GitHub...")
+        FetchContent_Declare(
+            nlohmann_json
+            GIT_REPOSITORY https://github.com/nlohmann/json.git
+            GIT_TAG v3.11.2
+        )
+        FetchContent_MakeAvailable(nlohmann_json)
+    endif()
 endif()
 
 # Find threading library

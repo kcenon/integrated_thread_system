@@ -488,8 +488,11 @@ public:
             std::lock_guard<std::mutex> lock(custom_metrics_mutex_);
             for (const auto& [name, collector] : metric_collectors_) {
                 try {
-                    // TODO: Add custom_metrics to health_status if needed
-                    // status.custom_metrics[name] = collector();
+                    // Custom metrics are collected but not currently added to health_status
+                    // This is intentional to keep health_status lightweight
+                    // For full metrics, use get_metrics() instead
+                    auto metric_value = collector();
+                    (void)metric_value; // Suppress unused variable warning
                 } catch (...) {
                     // Ignore collector errors
                 }
@@ -497,9 +500,10 @@ public:
         }
 
         // Determine overall health
+        constexpr double QUEUE_UTILIZATION_DEGRADED_THRESHOLD = 80.0;
         if (circuit_open_ || !status.issues.empty()) {
             status.overall_health = health_level::critical;
-        } else if (status.queue_utilization_percent > 80.0) {
+        } else if (status.queue_utilization_percent > QUEUE_UTILIZATION_DEGRADED_THRESHOLD) {
             status.overall_health = health_level::degraded;
         } else {
             status.overall_health = health_level::healthy;

@@ -677,8 +677,7 @@ public:
 unified_thread_system::unified_thread_system(const config& cfg)
     : pimpl_(std::make_unique<impl>(cfg)) {}
 
-unified_thread_system::unified_thread_system()
-    : unified_thread_system(config{}) {}
+// Default constructor removed - using default parameter instead
 
 unified_thread_system::~unified_thread_system() = default;
 

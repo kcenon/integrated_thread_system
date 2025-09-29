@@ -159,7 +159,6 @@ public:
      * enabled by default, matching the original thread_system behavior.
      */
     explicit unified_thread_system(const config& cfg = config());
-    unified_thread_system(); // Default constructor
 
     /**
      * @brief Destructor automatically handles graceful shutdown
@@ -348,8 +347,10 @@ private:
     template<typename... Args>
     void log_internal(log_level level, const std::string& message, Args&&... args) {
         // Simple implementation for template
+        (void)level;  // Suppress unused warning
         std::string formatted = message;
         // In real implementation, would format with args
+        ((void)args, ...);  // C++17 fold expression to suppress warnings
     }
 };
 

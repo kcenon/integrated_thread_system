@@ -3,7 +3,7 @@
  * @brief Implementation of the Unified Thread System
  */
 
-#include "unified_thread_system.h"
+#include <kcenon/integrated/unified_thread_system.h>
 
 #if EXTERNAL_SYSTEMS_AVAILABLE
 // Forward declarations to avoid header conflicts
@@ -279,8 +279,7 @@ public:
 unified_thread_system::unified_thread_system(const config& cfg)
     : pimpl_(std::make_unique<impl>(cfg)) {}
 
-unified_thread_system::unified_thread_system()
-    : pimpl_(std::make_unique<impl>(config{})) {}
+// Default constructor removed - using default parameter instead
 
 unified_thread_system::~unified_thread_system() = default;
 
@@ -316,18 +315,6 @@ void unified_thread_system::submit_internal(std::function<void()> task) {
     pimpl_->submit_internal(std::move(task));
 }
 
-// Template method implementation
-template<typename... Args>
-void unified_thread_system::log(log_level level, const std::string& message, Args&&... args) {
-    pimpl_->log_internal(level, message, std::forward<Args>(args)...);
-}
-
-// Explicit instantiation for common types
-template void unified_thread_system::log<>(log_level, const std::string&);
-template void unified_thread_system::log<int>(log_level, const std::string&, int&&);
-template void unified_thread_system::log<double>(log_level, const std::string&, double&&);
-template void unified_thread_system::log<std::string>(log_level, const std::string&, std::string&&);
-template void unified_thread_system::log<const char*>(log_level, const std::string&, const char*&&);
-template void unified_thread_system::log<size_t>(log_level, const std::string&, size_t&&);
+// Template method log is implemented inline in header file
 
 } // namespace kcenon::integrated

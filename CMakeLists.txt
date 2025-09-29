@@ -53,14 +53,36 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     endif()
 endif()
 
+# Include FetchContent for dependency management
+include(FetchContent)
+
 # Find dependencies
 if(USE_SYSTEM_DEPENDENCIES)
     find_package(fmt REQUIRED)
     find_package(nlohmann_json REQUIRED)
 else()
-    # Use vcpkg
-    find_package(fmt CONFIG REQUIRED)
-    find_package(nlohmann_json CONFIG REQUIRED)
+    # Try to find packages first, fall back to FetchContent if not found
+    find_package(fmt CONFIG QUIET)
+    if(NOT fmt_FOUND)
+        message(STATUS "fmt not found, fetching from GitHub...")
+        FetchContent_Declare(
+            fmt
+            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+            GIT_TAG 10.1.1
+        )
+        FetchContent_MakeAvailable(fmt)
+    endif()
+
+    find_package(nlohmann_json CONFIG QUIET)
+    if(NOT nlohmann_json_FOUND)
+        message(STATUS "nlohmann_json not found, fetching from GitHub...")
+        FetchContent_Declare(
+            nlohmann_json
+            GIT_REPOSITORY https://github.com/nlohmann/json.git
+            GIT_TAG v3.11.2
+        )
+        FetchContent_MakeAvailable(nlohmann_json)
+    endif()
 endif()
 
 # Find threading library
@@ -114,6 +136,12 @@ add_library(integrated_thread_system STATIC
     src/unified_thread_system.cpp
 )
 
+# Create enhanced version library
+add_library(integrated_thread_system_enhanced STATIC
+    # Enhanced implementation with advanced features
+    src/unified_thread_system_enhanced.cpp
+)
+
 # Set target properties
 set_target_properties(integrated_thread_system PROPERTIES
     VERSION ${PROJECT_VERSION}
@@ -121,8 +149,22 @@ set_target_properties(integrated_thread_system PROPERTIES
     EXPORT_NAME integrated_thread_system
 )
 
+set_target_properties(integrated_thread_system_enhanced PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    EXPORT_NAME integrated_thread_system_enhanced
+)
+
 # Include directories
 target_include_directories(integrated_thread_system
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_include_directories(integrated_thread_system_enhanced
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
@@ -139,10 +181,29 @@ if(EXTERNAL_SYSTEMS_AVAILABLE)
             ${LOGGER_SYSTEM_DIR}/include
             ${MONITORING_SYSTEM_DIR}/include
     )
+
+    target_include_directories(integrated_thread_system_enhanced
+        PRIVATE
+            # External system headers
+            ${THREAD_SYSTEM_DIR}/include
+            ${LOGGER_SYSTEM_DIR}/include
+            ${MONITORING_SYSTEM_DIR}/include
+    )
 endif()
 
 # Link dependencies
 target_link_libraries(integrated_thread_system
+    PUBLIC
+        # System dependencies
+        Threads::Threads
+
+    PRIVATE
+        # Internal dependencies
+        fmt::fmt
+        nlohmann_json::nlohmann_json
+)
+
+target_link_libraries(integrated_thread_system_enhanced
     PUBLIC
         # System dependencies
         Threads::Threads

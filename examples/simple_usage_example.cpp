@@ -6,7 +6,7 @@
  * as the original thread_system before it was split into 3 components.
  */
 
-#include <unified_thread_system.h>
+#include <kcenon/integrated/unified_thread_system.h>
 #include <iostream>
 #include <vector>
 #include <chrono>

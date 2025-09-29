@@ -4,7 +4,7 @@
  * @description Synchronous logging without parallel execution
  */
 
-#include "unified_thread_system.h"
+#include <kcenon/integrated/unified_thread_system.h>
 #include <iostream>
 #include <chrono>
 #include <fstream>

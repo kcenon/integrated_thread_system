@@ -4,7 +4,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "unified_thread_system.h"
+#include <kcenon/integrated/unified_thread_system.h>
 #include <chrono>
 #include <vector>
 

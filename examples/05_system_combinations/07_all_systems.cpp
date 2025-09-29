@@ -4,7 +4,7 @@
  * @description Complete integrated system with all features enabled
  */
 
-#include "unified_thread_system.h"
+#include <kcenon/integrated/unified_thread_system.h>
 #include <iostream>
 #include <chrono>
 #include <vector>

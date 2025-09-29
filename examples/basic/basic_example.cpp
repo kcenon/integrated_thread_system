@@ -6,7 +6,7 @@
  * task processing with automatic logging and monitoring.
  */
 
-#include "application_framework.h"
+#include <kcenon/integrated/unified_thread_system.h>
 #include <iostream>
 #include <vector>
 #include <chrono>
@@ -18,7 +18,7 @@ int main() {
     std::cout << "=== Integrated Thread System - Basic Example ===" << std::endl;
 
     // Configure the application
-    application_framework::application_config config;
+    unified_thread_system::config config;
     config.name = "Basic Example";
     config.version = "1.0.0";
     config.config_file_path = "config/development.json";
@@ -26,7 +26,7 @@ int main() {
 
     try {
         // Create application framework
-        application_framework app(config);
+        unified_thread_system app(config);
 
         // Setup startup callback
         app.on_startup([&app]() -> result_void {

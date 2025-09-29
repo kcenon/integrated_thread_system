@@ -65,7 +65,7 @@ private:
     // Thread pool components
     std::vector<std::thread> workers_;
     std::priority_queue<priority_task> tasks_;
-    std::mutex queue_mutex_;
+    mutable std::mutex queue_mutex_;
     std::condition_variable condition_;
     std::atomic<bool> stop_{false};
     std::atomic<bool> shutting_down_{false};
@@ -91,16 +91,16 @@ private:
     std::chrono::steady_clock::time_point circuit_open_time_;
 
     // Event system
-    std::mutex event_mutex_;
+    mutable std::mutex event_mutex_;
     std::map<std::string, std::vector<std::pair<size_t, event_callback>>> event_subscribers_;
     std::atomic<size_t> next_subscription_id_{1};
 
     // Custom metrics
-    std::mutex custom_metrics_mutex_;
+    mutable std::mutex custom_metrics_mutex_;
     std::map<std::string, std::function<double()>> metric_collectors_;
 
     // Health checks
-    std::mutex health_checks_mutex_;
+    mutable std::mutex health_checks_mutex_;
     std::map<std::string, std::function<std::pair<bool, std::string>()>> health_checks_;
 
     // Work stealing flag
@@ -245,7 +245,7 @@ private:
 
             // Check circuit breaker timeout
             if (circuit_open_ && config_.enable_circuit_breaker) {
-                if (now - circuit_open_time_ >= config_.circuit_breaker_timeout) {
+                if (now - circuit_open_time_ >= config_.circuit_breaker_reset_timeout) {
                     circuit_open_ = false;
                     consecutive_failures_ = 0;
                     log_message(log_level::info, "Circuit breaker reset");
@@ -478,7 +478,7 @@ public:
                         status.issues.push_back(name + ": " + message);
                     }
                 } catch (const std::exception& e) {
-                    status.warnings.push_back(name + " check failed: " + std::string(e.what()));
+                    status.issues.push_back(name + " check failed: " + std::string(e.what()));
                 }
             }
         }
@@ -488,7 +488,8 @@ public:
             std::lock_guard<std::mutex> lock(custom_metrics_mutex_);
             for (const auto& [name, collector] : metric_collectors_) {
                 try {
-                    status.custom_metrics[name] = collector();
+                    // TODO: Add custom_metrics to health_status if needed
+                    // status.custom_metrics[name] = collector();
                 } catch (...) {
                     // Ignore collector errors
                 }
@@ -498,7 +499,7 @@ public:
         // Determine overall health
         if (circuit_open_ || !status.issues.empty()) {
             status.overall_health = health_level::critical;
-        } else if (status.queue_utilization_percent > 80.0 || !status.warnings.empty()) {
+        } else if (status.queue_utilization_percent > 80.0) {
             status.overall_health = health_level::degraded;
         } else {
             status.overall_health = health_level::healthy;
@@ -765,21 +766,22 @@ bool unified_thread_system::is_circuit_open() const {
     return pimpl_->is_circuit_open();
 }
 
-void unified_thread_system::log_structured(log_level level, const std::string& message,
-                                           const std::unordered_map<std::string, std::any>& fields) {
-    // Structured logging implementation
-    // Would format fields into JSON or other structured format
-}
+// void unified_thread_system::log_structured(log_level level, const std::string& message,
+//                                            const std::unordered_map<std::string, std::any>& fields) {
+//     // Structured logging implementation
+//     // Would format fields into JSON or other structured format
+// }
 
-void unified_thread_system::register_metric_collector(const std::string& name,
-                                                     std::function<double()> collector) {
-    pimpl_->register_metric_collector(name, std::move(collector));
-}
-
-void unified_thread_system::add_health_check(const std::string& name,
-                                            std::function<std::pair<bool, std::string>()> check) {
-    pimpl_->add_health_check(name, std::move(check));
-}
+// Advanced monitoring features - not declared in header yet
+// void unified_thread_system::register_metric_collector(const std::string& name,
+//                                                      std::function<double()> collector) {
+//     pimpl_->register_metric_collector(name, std::move(collector));
+// }
+//
+// void unified_thread_system::add_health_check(const std::string& name,
+//                                             std::function<std::pair<bool, std::string>()> check) {
+//     pimpl_->add_health_check(name, std::move(check));
+// }
 
 size_t unified_thread_system::subscribe_to_events(const std::string& event_type, event_callback callback) {
     return pimpl_->subscribe_to_events(event_type, std::move(callback));
@@ -801,32 +803,32 @@ std::vector<std::string> unified_thread_system::list_plugins() const {
     return pimpl_->list_plugins();
 }
 
-// Scoped timer implementation
-class unified_thread_system::scoped_timer::impl {
-public:
-    impl(unified_thread_system& system, const std::string& operation_name)
-        : system_(system), operation_name_(operation_name),
-          start_time_(std::chrono::steady_clock::now()) {}
-
-    ~impl() {
-        auto duration = std::chrono::steady_clock::now() - start_time_;
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-
-        // Register the timing as a custom metric
-        system_.register_metric_collector(operation_name_ + "_last_duration_ms",
-                                        [ms]() { return static_cast<double>(ms); });
-    }
-
-private:
-    unified_thread_system& system_;
-    std::string operation_name_;
-    std::chrono::steady_clock::time_point start_time_;
-};
-
-unified_thread_system::scoped_timer::scoped_timer(unified_thread_system& system,
-                                                  const std::string& operation_name)
-    : pimpl(std::make_unique<impl>(system, operation_name)) {}
-
-unified_thread_system::scoped_timer::~scoped_timer() = default;
+// Scoped timer implementation - not declared in header yet
+// class unified_thread_system::scoped_timer::impl {
+// public:
+//     impl(unified_thread_system& system, const std::string& operation_name)
+//         : system_(system), operation_name_(operation_name),
+//           start_time_(std::chrono::steady_clock::now()) {}
+//
+//     ~impl() {
+//         auto duration = std::chrono::steady_clock::now() - start_time_;
+//         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+//
+//         // Register the timing as a custom metric
+//         system_.register_metric_collector(operation_name_ + "_last_duration_ms",
+//                                         [ms]() { return static_cast<double>(ms); });
+//     }
+//
+// private:
+//     unified_thread_system& system_;
+//     std::string operation_name_;
+//     std::chrono::steady_clock::time_point start_time_;
+// };
+//
+// unified_thread_system::scoped_timer::scoped_timer(unified_thread_system& system,
+//                                                   const std::string& operation_name)
+//     : pimpl(std::make_unique<impl>(system, operation_name)) {}
+//
+// unified_thread_system::scoped_timer::~scoped_timer() = default;
 
 } // namespace kcenon::integrated

@@ -19,6 +19,9 @@
 #include <vector>
 #include <string>
 #include <chrono>
+#include <any>
+#include <atomic>
+#include <optional>
 
 namespace kcenon::integrated {
 
@@ -26,19 +29,61 @@ namespace kcenon::integrated {
  * @brief Log levels matching the original thread_system
  */
 enum class log_level {
-    trace, debug, info, warning, error, critical
+    trace, debug, info, warning, error, critical, fatal
+};
+
+/**
+ * @brief Priority levels for task scheduling
+ */
+enum class priority_level {
+    lowest = 0,
+    low = 25,
+    normal = 50,
+    high = 75,
+    highest = 100,
+    critical = 127
+};
+
+/**
+ * @brief Cancellation token for cancellable tasks
+ */
+class cancellation_token {
+public:
+    cancellation_token() : cancelled_(std::make_shared<std::atomic<bool>>(false)) {}
+
+    void cancel() { cancelled_->store(true); }
+    bool is_cancelled() const { return cancelled_->load(); }
+
+private:
+    std::shared_ptr<std::atomic<bool>> cancelled_;
 };
 
 /**
  * @brief Performance metrics structure
  */
 struct performance_metrics {
+    // Basic metrics
     size_t tasks_submitted{0};
     size_t tasks_completed{0};
     size_t tasks_failed{0};
+    size_t tasks_cancelled{0};
+
+    // Latency metrics
     std::chrono::nanoseconds average_latency{0};
+    std::chrono::nanoseconds min_latency{0};
+    std::chrono::nanoseconds max_latency{0};
+    std::chrono::nanoseconds p95_latency{0};
+    std::chrono::nanoseconds p99_latency{0};
+
+    // Worker and queue metrics
     size_t active_workers{0};
     size_t queue_size{0};
+    size_t max_queue_size{0};
+    double queue_utilization_percent{0.0};
+
+    // Throughput metrics
+    double tasks_per_second{0.0};
+    std::chrono::steady_clock::time_point measurement_start;
 };
 
 /**
@@ -56,7 +101,44 @@ struct health_status {
     double cpu_usage_percent{0.0};
     double memory_usage_percent{0.0};
     double queue_utilization_percent{0.0};
+
+    // Circuit breaker status
+    bool circuit_breaker_open{false};
+    size_t consecutive_failures{0};
+
     std::vector<std::string> issues;
+};
+
+/**
+ * @brief Simple configuration options
+ */
+struct config {
+    std::string name = "ThreadSystem";
+    size_t thread_count = 0; // 0 = auto-detect
+    bool enable_file_logging = true;
+    bool enable_console_logging = true;
+    bool enable_monitoring = true;
+    std::string log_directory = "./logs";
+    log_level min_log_level = log_level::info;
+
+    // Enhanced features (optional)
+    bool enable_circuit_breaker = false;
+    size_t circuit_breaker_failure_threshold = 5;
+    std::chrono::milliseconds circuit_breaker_reset_timeout{5000};
+    size_t max_queue_size = 10000;
+    bool enable_work_stealing = true;
+    bool enable_dynamic_scaling = false;
+    size_t min_threads = 1;
+    size_t max_threads = 0; // 0 = no limit
+
+    // Builder pattern for configuration
+    config& set_name(const std::string& n) { name = n; return *this; }
+    config& set_worker_count(size_t c) { thread_count = c; return *this; }
+    config& set_logging(bool file, bool console) {
+        enable_file_logging = file;
+        enable_console_logging = console;
+        return *this;
+    }
 };
 
 /**
@@ -68,18 +150,7 @@ struct health_status {
  */
 class unified_thread_system {
 public:
-    /**
-     * @brief Simple configuration options
-     */
-    struct config {
-        std::string name = "ThreadSystem";
-        size_t thread_count = 0; // 0 = auto-detect
-        bool enable_file_logging = true;
-        bool enable_console_logging = true;
-        bool enable_monitoring = true;
-        std::string log_directory = "./logs";
-        log_level min_log_level = log_level::info;
-    };
+    using config = kcenon::integrated::config;  // Use the outer config struct
 
     /**
      * @brief Construct with automatic configuration
@@ -87,7 +158,7 @@ public:
      * Creates a fully functional thread system with logging and monitoring
      * enabled by default, matching the original thread_system behavior.
      */
-    explicit unified_thread_system(const config& cfg);
+    explicit unified_thread_system(const config& cfg = config());
     unified_thread_system(); // Default constructor
 
     /**
@@ -198,6 +269,54 @@ public:
     std::string export_metrics_prometheus() const;
 
     /**
+     * @brief Enhanced task submission with priority
+     */
+    template<typename F, typename... Args>
+    auto submit_with_priority(priority_level priority, F&& f, Args&&... args)
+        -> std::future<std::invoke_result_t<F, Args...>>;
+
+    template<typename F, typename... Args>
+    auto submit_critical(F&& f, Args&&... args)
+        -> std::future<std::invoke_result_t<F, Args...>> {
+        return submit_with_priority(priority_level::critical, std::forward<F>(f), std::forward<Args>(args)...);
+    }
+
+    template<typename F, typename... Args>
+    auto submit_background(F&& f, Args&&... args)
+        -> std::future<std::invoke_result_t<F, Args...>> {
+        return submit_with_priority(priority_level::low, std::forward<F>(f), std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Cancellable task submission
+     */
+    template<typename F, typename... Args>
+    auto submit_cancellable(cancellation_token& token, F&& f, Args&&... args)
+        -> std::future<std::invoke_result_t<F, Args...>>;
+
+    /**
+     * @brief Scheduled task submission
+     */
+    template<typename F, typename... Args>
+    auto schedule(std::chrono::milliseconds delay, F&& f, Args&&... args)
+        -> std::future<std::invoke_result_t<F, Args...>>;
+
+    /**
+     * @brief Recurring task submission
+     */
+    template<typename F>
+    size_t schedule_recurring(std::chrono::milliseconds interval, F&& f);
+
+    void cancel_recurring(size_t task_id);
+
+    /**
+     * @brief Map-reduce pattern
+     */
+    template<typename Iterator, typename MapFunc, typename ReduceFunc, typename T>
+    auto map_reduce(Iterator first, Iterator last, MapFunc&& map_func,
+                   ReduceFunc&& reduce_func, T initial) -> std::future<T>;
+
+    /**
      * @brief Event subscription for monitoring
      */
     using event_callback = std::function<void(const std::string&, const std::any&)>;
@@ -276,10 +395,11 @@ auto unified_thread_system::submit_cancellable(cancellation_token& token, F&& f,
     auto task = std::make_shared<std::packaged_task<return_type()>>(
         [token, func = std::bind(std::forward<F>(f), std::forward<Args>(args)...)]() -> return_type {
             if (token.is_cancelled()) {
-                if constexpr (!std::is_void_v<return_type>) {
+                if constexpr (std::is_void_v<return_type>) {
+                    return;
+                } else {
                     return return_type{};
                 }
-                return;
             }
             return func();
         }

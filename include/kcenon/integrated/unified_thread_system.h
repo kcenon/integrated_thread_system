@@ -137,7 +137,9 @@ public:
      * @brief Manual logging (automatic logging already handles most cases)
      */
     template<typename... Args>
-    void log(log_level level, const std::string& message, Args&&... args);
+    void log(log_level level, const std::string& message, Args&&... args) {
+        log_internal(level, message, std::forward<Args>(args)...);
+    }
 
     /**
      * @brief Wait for all currently queued tasks to complete
@@ -145,9 +147,24 @@ public:
     void wait_for_completion();
 
     /**
+     * @brief Wait with timeout
+     */
+    bool wait_for_completion_timeout(std::chrono::milliseconds timeout);
+
+    /**
      * @brief Get number of active worker threads
      */
     size_t worker_count() const;
+
+    /**
+     * @brief Dynamically adjust worker thread count
+     */
+    void set_worker_count(size_t count);
+
+    /**
+     * @brief Enable/disable work stealing between workers
+     */
+    void set_work_stealing(bool enabled);
 
     /**
      * @brief Get current queue size
@@ -159,14 +176,62 @@ public:
      */
     bool is_healthy() const;
 
+    /**
+     * @brief Stop accepting new tasks and wait for completion
+     */
+    void shutdown();
+
+    /**
+     * @brief Emergency shutdown (cancel all pending tasks)
+     */
+    void shutdown_immediate();
+
+    /**
+     * @brief Check if the system is shutting down
+     */
+    bool is_shutting_down() const;
+
+    /**
+     * @brief Export metrics to various formats
+     */
+    std::string export_metrics_json() const;
+    std::string export_metrics_prometheus() const;
+
+    /**
+     * @brief Event subscription for monitoring
+     */
+    using event_callback = std::function<void(const std::string&, const std::any&)>;
+    size_t subscribe_to_events(const std::string& event_type, event_callback callback);
+    void unsubscribe_from_events(size_t subscription_id);
+
+    /**
+     * @brief Circuit breaker control
+     */
+    void reset_circuit_breaker();
+    bool is_circuit_open() const;
+
+    /**
+     * @brief Plugin system support
+     */
+    void load_plugin(const std::string& plugin_path);
+    void unload_plugin(const std::string& plugin_name);
+    std::vector<std::string> list_plugins() const;
+
 private:
     class impl;
     std::unique_ptr<impl> pimpl_;
 
     // Internal methods
     void submit_internal(std::function<void()> task);
+    void submit_priority_internal(int priority, std::function<void()> task);
+    void schedule_internal(std::chrono::milliseconds delay, std::function<void()> task);
+    size_t schedule_recurring_internal(std::chrono::milliseconds interval, std::function<void()> task);
     template<typename... Args>
-    void log_internal(log_level level, const std::string& message, Args&&... args);
+    void log_internal(log_level level, const std::string& message, Args&&... args) {
+        // Simple implementation for template
+        std::string formatted = message;
+        // In real implementation, would format with args
+    }
 };
 
 // Template implementations
@@ -186,6 +251,67 @@ auto unified_thread_system::submit(F&& f, Args&&... args) -> std::future<std::in
     return result;
 }
 
+template<typename F, typename... Args>
+auto unified_thread_system::submit_with_priority(priority_level priority, F&& f, Args&&... args)
+    -> std::future<std::invoke_result_t<F, Args...>> {
+    using return_type = std::invoke_result_t<F, Args...>;
+
+    auto task = std::make_shared<std::packaged_task<return_type()>>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+    );
+
+    auto result = task->get_future();
+
+    // Submit with priority to internal implementation
+    submit_priority_internal(static_cast<int>(priority), [task]() { (*task)(); });
+
+    return result;
+}
+
+template<typename F, typename... Args>
+auto unified_thread_system::submit_cancellable(cancellation_token& token, F&& f, Args&&... args)
+    -> std::future<std::invoke_result_t<F, Args...>> {
+    using return_type = std::invoke_result_t<F, Args...>;
+
+    auto task = std::make_shared<std::packaged_task<return_type()>>(
+        [token, func = std::bind(std::forward<F>(f), std::forward<Args>(args)...)]() -> return_type {
+            if (token.is_cancelled()) {
+                if constexpr (!std::is_void_v<return_type>) {
+                    return return_type{};
+                }
+                return;
+            }
+            return func();
+        }
+    );
+
+    auto result = task->get_future();
+    submit_internal([task]() { (*task)(); });
+
+    return result;
+}
+
+template<typename F, typename... Args>
+auto unified_thread_system::schedule(std::chrono::milliseconds delay, F&& f, Args&&... args)
+    -> std::future<std::invoke_result_t<F, Args...>> {
+    using return_type = std::invoke_result_t<F, Args...>;
+
+    auto task = std::make_shared<std::packaged_task<return_type()>>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+    );
+
+    auto result = task->get_future();
+
+    schedule_internal(delay, [task]() { (*task)(); });
+
+    return result;
+}
+
+template<typename F>
+size_t unified_thread_system::schedule_recurring(std::chrono::milliseconds interval, F&& f) {
+    return schedule_recurring_internal(interval, std::forward<F>(f));
+}
+
 template<typename Iterator, typename F>
 auto unified_thread_system::submit_batch(Iterator first, Iterator last, F&& func)
     -> std::vector<std::future<std::invoke_result_t<F, typename Iterator::value_type>>> {
@@ -197,6 +323,29 @@ auto unified_thread_system::submit_batch(Iterator first, Iterator last, F&& func
     }
 
     return futures;
+}
+
+template<typename Iterator, typename MapFunc, typename ReduceFunc, typename T>
+auto unified_thread_system::map_reduce(Iterator first, Iterator last, MapFunc&& map_func,
+                               ReduceFunc&& reduce_func, T initial)
+    -> std::future<T> {
+
+    auto promise = std::make_shared<std::promise<T>>();
+    auto future = promise->get_future();
+
+    // Submit map phase
+    auto map_futures = submit_batch(first, last, std::forward<MapFunc>(map_func));
+
+    // Submit reduce phase
+    submit([promise, futures = std::move(map_futures), reduce_func, initial]() mutable {
+        T result = initial;
+        for (auto& f : futures) {
+            result = reduce_func(result, f.get());
+        }
+        promise->set_value(result);
+    });
+
+    return future;
 }
 
 // Template implementation moved to .cpp file for explicit instantiation

@@ -114,6 +114,12 @@ add_library(integrated_thread_system STATIC
     src/unified_thread_system.cpp
 )
 
+# Create enhanced version library
+add_library(integrated_thread_system_enhanced STATIC
+    # Enhanced implementation with advanced features
+    src/unified_thread_system_enhanced.cpp
+)
+
 # Set target properties
 set_target_properties(integrated_thread_system PROPERTIES
     VERSION ${PROJECT_VERSION}
@@ -121,8 +127,22 @@ set_target_properties(integrated_thread_system PROPERTIES
     EXPORT_NAME integrated_thread_system
 )
 
+set_target_properties(integrated_thread_system_enhanced PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    EXPORT_NAME integrated_thread_system_enhanced
+)
+
 # Include directories
 target_include_directories(integrated_thread_system
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_include_directories(integrated_thread_system_enhanced
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
@@ -139,10 +159,29 @@ if(EXTERNAL_SYSTEMS_AVAILABLE)
             ${LOGGER_SYSTEM_DIR}/include
             ${MONITORING_SYSTEM_DIR}/include
     )
+
+    target_include_directories(integrated_thread_system_enhanced
+        PRIVATE
+            # External system headers
+            ${THREAD_SYSTEM_DIR}/include
+            ${LOGGER_SYSTEM_DIR}/include
+            ${MONITORING_SYSTEM_DIR}/include
+    )
 endif()
 
 # Link dependencies
 target_link_libraries(integrated_thread_system
+    PUBLIC
+        # System dependencies
+        Threads::Threads
+
+    PRIVATE
+        # Internal dependencies
+        fmt::fmt
+        nlohmann_json::nlohmann_json
+)
+
+target_link_libraries(integrated_thread_system_enhanced
     PUBLIC
         # System dependencies
         Threads::Threads

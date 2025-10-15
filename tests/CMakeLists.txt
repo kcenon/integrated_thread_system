@@ -16,9 +16,17 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
+# Test utilities library
+add_library(test_utilities INTERFACE)
+target_include_directories(test_utilities INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+)
+target_compile_features(test_utilities INTERFACE cxx_std_20)
+
 # Common test configuration
 set(TEST_COMMON_LIBS
     integrated_thread_system
+    test_utilities
     GTest::gtest
     GTest::gtest_main
     Threads::Threads

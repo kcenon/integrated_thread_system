@@ -1,321 +1,329 @@
-/**
- * @file unified_thread_system.cpp
- * @brief Implementation of the Unified Thread System
- */
+// BSD 3-Clause License
+// Copyright (c) 2025, kcenon
+// See the LICENSE file in the project root for full license information.
 
 #include <kcenon/integrated/unified_thread_system.h>
+#include <kcenon/integrated/core/system_coordinator.h>
+#include <kcenon/integrated/core/configuration.h>
+#include <kcenon/integrated/adapters/thread_adapter.h>
+#include <kcenon/integrated/adapters/logger_adapter.h>
+#include <kcenon/integrated/adapters/monitoring_adapter.h>
+#include <kcenon/integrated/extensions/metrics_aggregator.h>
+#include <kcenon/integrated/extensions/distributed_tracing.h>
+#include <kcenon/integrated/extensions/plugin_manager.h>
 
-#if EXTERNAL_SYSTEMS_AVAILABLE
-// Forward declarations to avoid header conflicts
-namespace kcenon::thread { class thread_pool; }
-namespace kcenon::logger { class logger; }
-namespace monitoring_system {
-    class performance_monitor;
-    class system_resource_collector;
-}
-#endif
-
-#include <iostream>
-#include <memory>
-#include <future>
-#include <thread>
-#include <queue>
 #include <mutex>
-#include <condition_variable>
-#include <functional>
+#include <unordered_map>
 
 namespace kcenon::integrated {
 
+/**
+ * @brief Implementation of unified_thread_system
+ */
 class unified_thread_system::impl {
-private:
-    config config_;
-    std::unique_ptr<std::thread> thread_pool_wrapper_;
-    bool logger_initialized_{false};
-    bool monitoring_initialized_{false};
-
-    // Simple thread pool implementation
-    std::vector<std::thread> workers_;
-    std::queue<std::function<void()>> tasks_;
-    std::mutex queue_mutex_;
-    std::condition_variable condition_;
-    bool stop_{false};
-
 public:
-    explicit impl(const config& cfg) : config_(cfg) {
-        initialize_systems();
+    explicit impl(const config& cfg)
+        : config_(cfg)
+        , shutting_down_(false) {
+
+        // Convert old config to new unified_config
+        unified_config unified_cfg;
+
+        // Thread configuration
+        unified_cfg.thread.name = cfg.name;
+        unified_cfg.thread.thread_count = cfg.thread_count;
+        unified_cfg.thread.max_queue_size = cfg.max_queue_size;
+        unified_cfg.thread.enable_work_stealing = cfg.enable_work_stealing;
+        unified_cfg.thread.enable_dynamic_scaling = cfg.enable_dynamic_scaling;
+        unified_cfg.thread.min_threads = cfg.min_threads;
+        unified_cfg.thread.max_threads = cfg.max_threads;
+
+        // Logger configuration
+        unified_cfg.logger.enable_file_logging = cfg.enable_file_logging;
+        unified_cfg.logger.enable_console_logging = cfg.enable_console_logging;
+        unified_cfg.logger.log_directory = cfg.log_directory;
+        unified_cfg.logger.min_log_level = cfg.min_log_level;
+
+        // Monitoring configuration
+        unified_cfg.monitoring.enable_monitoring = cfg.enable_monitoring;
+
+        // Circuit breaker configuration
+        unified_cfg.circuit_breaker.enabled = cfg.enable_circuit_breaker;
+        unified_cfg.circuit_breaker.failure_threshold = cfg.circuit_breaker_failure_threshold;
+        unified_cfg.circuit_breaker.reset_timeout = cfg.circuit_breaker_reset_timeout;
+
+        // Create coordinator
+        coordinator_ = std::make_unique<system_coordinator>(unified_cfg);
+
+        // Initialize extensions
+        metrics_aggregator_ = std::make_unique<extensions::metrics_aggregator>();
+        distributed_tracing_ = std::make_unique<extensions::distributed_tracing>();
+        plugin_manager_ = std::make_unique<extensions::plugin_manager>();
+
+        // Initialize all systems
+        auto init_result = coordinator_->initialize();
+        if (init_result.is_err()) {
+            throw std::runtime_error("Failed to initialize unified_thread_system: " +
+                                   init_result.error().message);
+        }
+
+        // Initialize extensions
+        metrics_aggregator_->initialize();
+        distributed_tracing_->initialize();
+        plugin_manager_->initialize();
     }
 
     ~impl() {
-        shutdown_systems();
+        if (!shutting_down_) {
+            shutdown_impl();
+        }
+    }
+
+    void submit_internal(std::function<void()> task) {
+        if (shutting_down_) {
+            throw std::runtime_error("System is shutting down");
+        }
+
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        if (!thread_adapter) {
+            throw std::runtime_error("Thread adapter not available");
+        }
+
+        auto result = thread_adapter->execute(std::move(task));
+        if (result.is_err()) {
+            throw std::runtime_error("Failed to submit task: " + result.error().message);
+        }
+    }
+
+    void submit_priority_internal(int priority, std::function<void()> task) {
+        submit_internal(std::move(task));
+    }
+
+    void schedule_internal(std::chrono::milliseconds delay, std::function<void()> task) {
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        if (!thread_adapter) {
+            throw std::runtime_error("Thread adapter not available");
+        }
+
+        thread_adapter->execute([delay, task = std::move(task)]() {
+            std::this_thread::sleep_for(delay);
+            task();
+        });
+    }
+
+    size_t schedule_recurring_internal(std::chrono::milliseconds interval, std::function<void()> task) {
+        return 0;
+    }
+
+    performance_metrics get_metrics() const {
+        performance_metrics metrics;
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        if (thread_adapter) {
+            metrics.active_workers = thread_adapter->worker_count();
+            metrics.queue_size = thread_adapter->queue_size();
+        }
+        return metrics;
+    }
+
+    health_status get_health() const {
+        health_status status;
+        auto* monitoring_adapter = coordinator_->get_monitoring_adapter();
+        if (monitoring_adapter) {
+            auto health_result = monitoring_adapter->check_health();
+            if (health_result.is_ok()) {
+                status.overall_health = health_result.value().is_healthy() ?
+                    health_level::healthy : health_level::degraded;
+            }
+        }
+        return status;
+    }
+
+    void wait_for_completion() {
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        if (thread_adapter) {
+            thread_adapter->wait_for_completion();
+        }
+    }
+
+    bool wait_for_completion_timeout(std::chrono::milliseconds timeout) {
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        return thread_adapter ? thread_adapter->wait_for_completion_timeout(timeout) : true;
+    }
+
+    size_t worker_count() const {
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        return thread_adapter ? thread_adapter->worker_count() : 0;
+    }
+
+    void set_worker_count(size_t count) {}
+    void set_work_stealing(bool enabled) {}
+
+    size_t queue_size() const {
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        return thread_adapter ? thread_adapter->queue_size() : 0;
+    }
+
+    bool is_healthy() const {
+        return get_health().overall_health == health_level::healthy;
+    }
+
+    void shutdown_impl() {
+        if (shutting_down_) return;
+        shutting_down_ = true;
+        plugin_manager_->shutdown();
+        distributed_tracing_->shutdown();
+        metrics_aggregator_->shutdown();
+        coordinator_->shutdown();
+    }
+
+    void shutdown_immediate() { shutdown_impl(); }
+    bool is_shutting_down() const { return shutting_down_; }
+
+    std::string export_metrics_json() const {
+        return metrics_aggregator_->export_json_format();
+    }
+
+    std::string export_metrics_prometheus() const {
+        return metrics_aggregator_->export_prometheus_format();
+    }
+
+    void cancel_recurring(size_t task_id) {}
+    size_t subscribe_to_events(const std::string& event_type, event_callback callback) { return 0; }
+    void unsubscribe_from_events(size_t subscription_id) {}
+    void reset_circuit_breaker() {}
+    bool is_circuit_open() const { return false; }
+
+    void load_plugin(const std::string& plugin_path) {
+        plugin_manager_->load_plugin(plugin_path);
+    }
+
+    void unload_plugin(const std::string& plugin_name) {
+        plugin_manager_->unload_plugin(plugin_name);
+    }
+
+    std::vector<std::string> list_plugins() const {
+        return plugin_manager_->list_plugins();
     }
 
 private:
-    void initialize_systems() {
-#if EXTERNAL_SYSTEMS_AVAILABLE
-        std::cout << "Initializing with external systems integration..." << std::endl;
-#else
-        std::cout << "Initializing in headers-only mode..." << std::endl;
-#endif
+    config config_;
+    std::atomic<bool> shutting_down_;
 
-        // Initialize logger system first
-        if (config_.enable_console_logging || config_.enable_file_logging) {
-            try {
-                logger_initialized_ = true;
-                std::cout << "Logger system initialized for: " << config_.name << std::endl;
-            } catch (const std::exception& e) {
-                std::cerr << "Failed to initialize logger: " << e.what() << std::endl;
-            }
-        }
-
-        // Initialize thread pool with actual workers
-        try {
-            const size_t thread_count = config_.thread_count == 0 ? std::thread::hardware_concurrency() : config_.thread_count;
-
-            // Create worker threads
-            for (size_t i = 0; i < thread_count; ++i) {
-                workers_.emplace_back([this] {
-                    for (;;) {
-                        std::function<void()> task;
-                        {
-                            std::unique_lock<std::mutex> lock(queue_mutex_);
-                            condition_.wait(lock, [this] { return stop_ || !tasks_.empty(); });
-                            if (stop_ && tasks_.empty()) return;
-                            task = std::move(tasks_.front());
-                            tasks_.pop();
-                        }
-                        task();
-                    }
-                });
-            }
-
-            std::cout << "Thread pool initialized with " << thread_count << " threads" << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "Failed to initialize thread pool: " << e.what() << std::endl;
-        }
-
-        // Initialize monitoring system
-        if (config_.enable_monitoring) {
-            try {
-                monitoring_initialized_ = true;
-                std::cout << "Monitoring system initialized" << std::endl;
-            } catch (const std::exception& e) {
-                std::cerr << "Failed to initialize monitoring: " << e.what() << std::endl;
-            }
-        }
-    }
-
-    void shutdown_systems() {
-        if (logger_initialized_) {
-            std::cout << "Shutting down unified thread system" << std::endl;
-        }
-
-        // Shutdown thread pool
-        {
-            std::unique_lock<std::mutex> lock(queue_mutex_);
-            stop_ = true;
-        }
-        condition_.notify_all();
-        for (std::thread &worker : workers_) {
-            if (worker.joinable()) {
-                worker.join();
-            }
-        }
-
-        // Shutdown in reverse order
-        monitoring_initialized_ = false;
-        thread_pool_wrapper_.reset();
-        logger_initialized_ = false;
-    }
-
-public:
-
-    // Thread system operations - actual thread pool implementation
-    template<typename F, typename... Args>
-    auto submit(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
-        using return_type = std::invoke_result_t<F, Args...>;
-
-        auto task = std::make_shared<std::packaged_task<return_type()>>(
-            std::bind(std::forward<F>(f), std::forward<Args>(args)...)
-        );
-
-        std::future<return_type> result = task->get_future();
-        {
-            std::unique_lock<std::mutex> lock(queue_mutex_);
-            if (stop_) {
-                throw std::runtime_error("submit on stopped ThreadPool");
-            }
-            tasks_.emplace([task]() { (*task)(); });
-        }
-        condition_.notify_one();
-        return result;
-    }
-
-    template<typename F, typename... Args>
-    auto submit_critical(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
-        // Critical tasks use the same pool but could have priority in a full implementation
-        return submit(std::forward<F>(f), std::forward<Args>(args)...);
-    }
-
-    template<typename F, typename... Args>
-    auto submit_background(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
-        // Background tasks use the same pool but could have lower priority in a full implementation
-        return submit(std::forward<F>(f), std::forward<Args>(args)...);
-    }
-
-    // Logger system operations - simplified implementation
-    void log_debug(const std::string& message) {
-        if (logger_initialized_ && config_.enable_console_logging) {
-            std::cout << "[DEBUG] " << message << std::endl;
-        }
-    }
-
-    void log_info(const std::string& message) {
-        if (logger_initialized_ && config_.enable_console_logging) {
-            std::cout << "[INFO] " << message << std::endl;
-        }
-    }
-
-    void log_warning(const std::string& message) {
-        if (logger_initialized_ && config_.enable_console_logging) {
-            std::cout << "[WARNING] " << message << std::endl;
-        }
-    }
-
-    void log_error(const std::string& message) {
-        if (logger_initialized_ && config_.enable_console_logging) {
-            std::cout << "[ERROR] " << message << std::endl;
-        }
-    }
-
-    void log_critical(const std::string& message) {
-        if (logger_initialized_ && config_.enable_console_logging) {
-            std::cout << "[CRITICAL] " << message << std::endl;
-        }
-    }
-
-    // Monitor system operations - simplified implementation
-    void register_metric(const std::string& name, int type) {
-        if (monitoring_initialized_) {
-            std::cout << "Registered metric: " << name << " (type: " << type << ")" << std::endl;
-        }
-    }
-
-    void increment_counter(const std::string& name, double value = 1.0) {
-        if (monitoring_initialized_) {
-            std::cout << "Incremented counter: " << name << " by " << value << std::endl;
-        }
-    }
-
-    void set_gauge(const std::string& name, double value) {
-        if (monitoring_initialized_) {
-            std::cout << "Set gauge: " << name << " to " << value << std::endl;
-        }
-    }
-
-    double get_counter(const std::string& name) const {
-        return 0.0;
-    }
-
-    performance_metrics get_system_metrics() const {
-        return performance_metrics{};
-    }
-
-    void register_health_check(const std::string& name, std::function<health_status()> check) {
-        if (monitoring_initialized_) {
-            std::cout << "Registered health check: " << name << std::endl;
-        }
-    }
-
-    health_status check_health() const {
-        return health_status{health_level::healthy, 0.0, 0.0, 0.0, {}};
-    }
-
-    performance_metrics get_performance_stats() const {
-        return get_system_metrics();
-    }
-
-    // Configuration operations
-    void reconfigure(const config& new_config) {
-        config_ = new_config;
-        std::cout << "Reconfigured system" << std::endl;
-    }
-
-    config get_config() const {
-        return config_;
-    }
-
-    // Internal task submission - uses the thread pool
-    void submit_internal(std::function<void()> task) {
-        {
-            std::unique_lock<std::mutex> lock(queue_mutex_);
-            if (stop_) {
-                throw std::runtime_error("submit on stopped ThreadPool");
-            }
-            tasks_.emplace(std::move(task));
-        }
-        condition_.notify_one();
-    }
-
-    // Internal logging
-    template<typename... Args>
-    void log_internal(log_level level, const std::string& message, Args&&... args) {
-        if (!config_.enable_console_logging) return;
-
-        std::string level_str;
-        switch (level) {
-            case log_level::trace: level_str = "TRACE"; break;
-            case log_level::debug: level_str = "DEBUG"; break;
-            case log_level::info: level_str = "INFO"; break;
-            case log_level::warning: level_str = "WARNING"; break;
-            case log_level::error: level_str = "ERROR"; break;
-            case log_level::critical: level_str = "CRITICAL"; break;
-            case log_level::fatal: level_str = "FATAL"; break;
-        }
-
-        std::cout << "[" << level_str << "] " << message << std::endl;
-    }
+    std::unique_ptr<system_coordinator> coordinator_;
+    std::unique_ptr<extensions::metrics_aggregator> metrics_aggregator_;
+    std::unique_ptr<extensions::distributed_tracing> distributed_tracing_;
+    std::unique_ptr<extensions::plugin_manager> plugin_manager_;
 };
 
-// Constructor and destructor
+// unified_thread_system implementation
+
 unified_thread_system::unified_thread_system(const config& cfg)
     : pimpl_(std::make_unique<impl>(cfg)) {}
 
-// Default constructor removed - using default parameter instead
-
 unified_thread_system::~unified_thread_system() = default;
 
-// Thread system operations (explicit instantiations would go here)
-
-// Public method implementations
-performance_metrics unified_thread_system::get_metrics() const {
-    return pimpl_->get_system_metrics();
-}
-
-health_status unified_thread_system::get_health() const {
-    return pimpl_->check_health();
-}
-
-void unified_thread_system::wait_for_completion() {
-    // Stub implementation
-}
-
-size_t unified_thread_system::worker_count() const {
-    return pimpl_->get_config().thread_count;
-}
-
-size_t unified_thread_system::queue_size() const {
-    return 0; // Stub implementation
-}
-
-bool unified_thread_system::is_healthy() const {
-    return true; // Stub implementation
-}
-
-// Internal methods implementation
 void unified_thread_system::submit_internal(std::function<void()> task) {
     pimpl_->submit_internal(std::move(task));
 }
 
-// Template method log is implemented inline in header file
+void unified_thread_system::submit_priority_internal(int priority, std::function<void()> task) {
+    pimpl_->submit_priority_internal(priority, std::move(task));
+}
+
+void unified_thread_system::schedule_internal(std::chrono::milliseconds delay, std::function<void()> task) {
+    pimpl_->schedule_internal(delay, std::move(task));
+}
+
+size_t unified_thread_system::schedule_recurring_internal(std::chrono::milliseconds interval, std::function<void()> task) {
+    return pimpl_->schedule_recurring_internal(interval, std::move(task));
+}
+
+performance_metrics unified_thread_system::get_metrics() const {
+    return pimpl_->get_metrics();
+}
+
+health_status unified_thread_system::get_health() const {
+    return pimpl_->get_health();
+}
+
+void unified_thread_system::wait_for_completion() {
+    pimpl_->wait_for_completion();
+}
+
+bool unified_thread_system::wait_for_completion_timeout(std::chrono::milliseconds timeout) {
+    return pimpl_->wait_for_completion_timeout(timeout);
+}
+
+size_t unified_thread_system::worker_count() const {
+    return pimpl_->worker_count();
+}
+
+void unified_thread_system::set_worker_count(size_t count) {
+    pimpl_->set_worker_count(count);
+}
+
+void unified_thread_system::set_work_stealing(bool enabled) {
+    pimpl_->set_work_stealing(enabled);
+}
+
+size_t unified_thread_system::queue_size() const {
+    return pimpl_->queue_size();
+}
+
+bool unified_thread_system::is_healthy() const {
+    return pimpl_->is_healthy();
+}
+
+void unified_thread_system::shutdown() {
+    pimpl_->shutdown_impl();
+}
+
+void unified_thread_system::shutdown_immediate() {
+    pimpl_->shutdown_immediate();
+}
+
+bool unified_thread_system::is_shutting_down() const {
+    return pimpl_->is_shutting_down();
+}
+
+std::string unified_thread_system::export_metrics_json() const {
+    return pimpl_->export_metrics_json();
+}
+
+std::string unified_thread_system::export_metrics_prometheus() const {
+    return pimpl_->export_metrics_prometheus();
+}
+
+void unified_thread_system::cancel_recurring(size_t task_id) {
+    pimpl_->cancel_recurring(task_id);
+}
+
+size_t unified_thread_system::subscribe_to_events(const std::string& event_type, event_callback callback) {
+    return pimpl_->subscribe_to_events(event_type, callback);
+}
+
+void unified_thread_system::unsubscribe_from_events(size_t subscription_id) {
+    pimpl_->unsubscribe_from_events(subscription_id);
+}
+
+void unified_thread_system::reset_circuit_breaker() {
+    pimpl_->reset_circuit_breaker();
+}
+
+bool unified_thread_system::is_circuit_open() const {
+    return pimpl_->is_circuit_open();
+}
+
+void unified_thread_system::load_plugin(const std::string& plugin_path) {
+    pimpl_->load_plugin(plugin_path);
+}
+
+void unified_thread_system::unload_plugin(const std::string& plugin_name) {
+    pimpl_->unload_plugin(plugin_name);
+}
+
+std::vector<std::string> unified_thread_system::list_plugins() const {
+    return pimpl_->list_plugins();
+}
 
 } // namespace kcenon::integrated

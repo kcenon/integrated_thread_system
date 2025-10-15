@@ -22,15 +22,9 @@
 #include <any>
 #include <atomic>
 #include <optional>
+#include <kcenon/integrated/core/configuration.h>
 
 namespace kcenon::integrated {
-
-/**
- * @brief Log levels matching the original thread_system
- */
-enum class log_level {
-    trace, debug, info, warning, error, critical, fatal
-};
 
 /**
  * @brief Priority levels for task scheduling

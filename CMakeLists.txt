@@ -205,10 +205,22 @@ else()
         FetchContent_Declare(
             nlohmann_json
             GIT_REPOSITORY https://github.com/nlohmann/json.git
-            GIT_TAG v3.11.2
+            GIT_TAG v3.11.3
             GIT_SHALLOW TRUE
         )
+        # Set policy to avoid CMake version compatibility issues
+        set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+        set(JSON_BuildTests OFF CACHE INTERNAL "")
+        set(JSON_Install OFF CACHE INTERNAL "")
         FetchContent_MakeAvailable(nlohmann_json)
+
+        # Store the include directory for header-only usage
+        if(TARGET nlohmann_json)
+            get_target_property(NLOHMANN_JSON_INCLUDE_DIR nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
+            set(nlohmann_json_INCLUDE_DIR "${NLOHMANN_JSON_INCLUDE_DIR}" CACHE INTERNAL "")
+        elseif(nlohmann_json_SOURCE_DIR)
+            set(nlohmann_json_INCLUDE_DIR "${nlohmann_json_SOURCE_DIR}/include" CACHE INTERNAL "")
+        endif()
     endif()
 endif()
 
@@ -317,6 +329,23 @@ if(EXTERNAL_SYSTEMS_AVAILABLE)
     )
 endif()
 
+# Add nlohmann_json include directory (header-only, no link dependency needed)
+if(DEFINED nlohmann_json_INCLUDE_DIR)
+    target_include_directories(integrated_thread_system
+        PRIVATE ${nlohmann_json_INCLUDE_DIR}
+    )
+    target_include_directories(integrated_thread_system_enhanced
+        PRIVATE ${nlohmann_json_INCLUDE_DIR}
+    )
+elseif(TARGET nlohmann_json::nlohmann_json)
+    target_include_directories(integrated_thread_system
+        PRIVATE $<TARGET_PROPERTY:nlohmann_json::nlohmann_json,INTERFACE_INCLUDE_DIRECTORIES>
+    )
+    target_include_directories(integrated_thread_system_enhanced
+        PRIVATE $<TARGET_PROPERTY:nlohmann_json::nlohmann_json,INTERFACE_INCLUDE_DIRECTORIES>
+    )
+endif()
+
 ##################################################
 # Link Dependencies
 ##################################################
@@ -326,7 +355,6 @@ target_link_libraries(integrated_thread_system
         Threads::Threads
     PRIVATE
         fmt::fmt
-        nlohmann_json::nlohmann_json
 )
 
 target_link_libraries(integrated_thread_system_enhanced
@@ -334,8 +362,10 @@ target_link_libraries(integrated_thread_system_enhanced
         Threads::Threads
     PRIVATE
         fmt::fmt
-        nlohmann_json::nlohmann_json
 )
+
+# Note: nlohmann_json is header-only and included via PRIVATE include directories
+# No link dependency needed, avoiding export set issues
 
 # Platform-specific libraries
 if(WIN32)

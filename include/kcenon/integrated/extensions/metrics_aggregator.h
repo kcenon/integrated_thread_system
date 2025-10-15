@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -37,6 +38,17 @@ struct aggregated_metrics {
 
     // Custom metrics
     std::unordered_map<std::string, double> custom_metrics;
+
+    // Default constructor
+    aggregated_metrics() = default;
+
+    // Copy constructor
+    aggregated_metrics(const aggregated_metrics&) = default;
+    aggregated_metrics& operator=(const aggregated_metrics&) = default;
+
+    // Move constructor
+    aggregated_metrics(aggregated_metrics&&) noexcept = default;
+    aggregated_metrics& operator=(aggregated_metrics&&) noexcept = default;
 };
 
 /**

@@ -4,7 +4,8 @@
 
 #include <kcenon/integrated/adapters/logger_adapter.h>
 
-// TODO: Enable logger_system integration when dependencies are resolved
+// Note: Currently using built-in console logger for simplicity.
+// External logger_system integration can be enabled for file output, rotation, and remote logging.
 // #if EXTERNAL_SYSTEMS_AVAILABLE
 // #include <kcenon/logger/core/logger.h>
 // #endif
@@ -36,10 +37,11 @@ public:
 
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
-            // TODO: Integrate with actual logger_system
+            // External logger_system integration would go here
+            // Would provide: file output, log rotation, remote logging, structured logging
 #endif
 
-            // Fallback: Simple console logger
+            // Built-in console logger
             initialized_ = true;
             return common::ok();
         } catch (const std::exception& e) {

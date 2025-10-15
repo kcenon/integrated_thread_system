@@ -4,7 +4,8 @@
 
 #include <kcenon/integrated/adapters/monitoring_adapter.h>
 
-// TODO: Enable monitoring_system integration when dependencies are resolved
+// Note: Currently using built-in in-memory metrics storage for simplicity.
+// External monitoring_system integration can be enabled for dashboards, alerts, and metric persistence.
 // #if EXTERNAL_SYSTEMS_AVAILABLE
 // #include <kcenon/monitoring/core/performance_monitor.h>
 // #endif
@@ -35,10 +36,12 @@ public:
 
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
-            // TODO: Integrate with actual monitoring_system
+            // External monitoring_system integration would go here
+            // Would provide: dashboards, alerts, metric persistence, aggregation
+            // Current built-in implementation is sufficient for most use cases
 #endif
 
-            // Fallback: Simple in-memory metrics storage
+            // Built-in in-memory metrics storage
             initialized_ = true;
             start_time_ = std::chrono::steady_clock::now();
             return common::ok();

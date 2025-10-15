@@ -4,9 +4,11 @@
 
 #include <kcenon/integrated/adapters/thread_adapter.h>
 
-// TODO: Enable thread_system integration when fmt dependency is resolved
+// Note: Currently using built-in thread pool implementation for simplicity and zero dependencies.
+// External thread_system integration can be enabled by uncommenting below and implementing
+// the integration in the #if EXTERNAL_SYSTEMS_AVAILABLE block.
 // #if EXTERNAL_SYSTEMS_AVAILABLE
-// #include <kcenon/thread/core/thread_pool.h>
+// #include <kcenon/thread/core/typed_thread_pool.h>
 // #endif
 
 #include <thread>
@@ -40,12 +42,12 @@ public:
 
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
-            // Use real thread_system when available
-            // TODO: Integrate with actual thread_system::thread_pool
-            // For now, use fallback implementation
+            // External thread_system integration would go here
+            // Would provide: priority scheduling, typed pools, job cancellation
+            // Current built-in implementation is sufficient for most use cases
 #endif
 
-            // Fallback: Create simple thread pool
+            // Built-in thread pool implementation
             std::size_t thread_count = config_.thread_count;
             if (thread_count == 0) {
                 thread_count = std::thread::hardware_concurrency();

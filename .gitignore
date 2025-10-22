@@ -145,3 +145,9 @@ scratch/
 
 # Documentation output
 documents/
+
+# Embedded dependencies (now using Sources/ directory)
+common_system/
+thread_system/
+logger_system/
+monitoring_system/

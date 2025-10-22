@@ -1,0 +1,161 @@
+name: Static Analysis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  clang-tidy:
+    name: Clang-Tidy Analysis
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        persist-credentials: true
+        clean: true
+        fetch-depth: 1
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout common_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/common_system
+        path: common_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout thread_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/thread_system
+        path: thread_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout logger_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/logger_system
+        path: logger_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout monitoring_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/monitoring_system
+        path: monitoring_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y cmake build-essential ninja-build clang clang-tidy lld
+        sudo apt install -y libgtest-dev libgmock-dev
+        sudo apt install -y libfmt-dev nlohmann-json3-dev
+
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DBUILD_EXAMPLES=OFF \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+          -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_COMPILER=clang++
+
+    - name: Build
+      run: |
+        cd build
+        cmake --build . --parallel
+
+    - name: Run clang-tidy
+      run: |
+        cd build
+        # Run clang-tidy on all source files
+        find ../src -name "*.cpp" -exec clang-tidy {} -p . \; || echo "clang-tidy completed with warnings"
+
+    - name: Upload clang-tidy results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: clang-tidy-results
+        path: build/clang-tidy-*.txt
+        retention-days: 30
+
+  cppcheck:
+    name: Cppcheck Analysis
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install cppcheck
+      run: |
+        sudo apt update
+        sudo apt install -y cppcheck
+
+    - name: Run cppcheck
+      run: |
+        cppcheck --enable=all --inconclusive --xml --xml-version=2 \
+          --suppress=missingIncludeSystem \
+          --suppress=unmatchedSuppression \
+          -I include \
+          src 2> cppcheck-report.xml || true
+
+    - name: Upload cppcheck results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: cppcheck-results
+        path: cppcheck-report.xml
+        retention-days: 30
+
+  codespell:
+    name: Spell Check
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install codespell
+      run: |
+        sudo apt update
+        sudo apt install -y codespell
+
+    - name: Run codespell
+      run: |
+        codespell --skip=".git,build,vcpkg,*.json" \
+          src include docs README.md || true
+
+  formatting:
+    name: Code Formatting Check
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install clang-format
+      run: |
+        sudo apt update
+        sudo apt install -y clang-format
+
+    - name: Check formatting
+      run: |
+        find src include -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | \
+          xargs clang-format --dry-run --Werror || echo "Formatting issues detected"

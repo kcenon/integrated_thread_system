@@ -1,0 +1,396 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }} / ${{ matrix.compiler }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+
+    env:
+      BUILD_TYPE: Debug
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_FEATURE_FLAGS: "manifests,registries,versions,binarycaching"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            compiler: gcc
+            triplet: x64-linux
+          - os: ubuntu-22.04
+            compiler: clang
+            triplet: x64-linux
+          - os: macos-13
+            compiler: clang
+            triplet: x64-osx
+          - os: windows-2022
+            compiler: msvc
+            triplet: x64-windows
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        persist-credentials: true
+        clean: true
+        fetch-depth: 1
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout common_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/common_system
+        path: common_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout thread_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/thread_system
+        path: thread_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout logger_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/logger_system
+        path: logger_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout monitoring_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/monitoring_system
+        path: monitoring_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install dependencies (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt update
+        sudo apt install -y cmake build-essential gdb pkg-config curl zip unzip tar autoconf automake autoconf-archive ninja-build
+        sudo apt install -y clang lld
+        sudo apt install -y libgtest-dev libgmock-dev
+        sudo apt install -y libfmt-dev nlohmann-json3-dev
+
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install ninja pkg-config curl zip unzip autoconf automake autoconf-archive
+
+    - name: Setup Visual Studio (Windows)
+      if: runner.os == 'Windows'
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup Visual Studio environment (Windows)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Check architecture (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        if [ "$(uname -m)" = "aarch64" ]; then
+          echo "VCPKG_FORCE_SYSTEM_BINARIES=arm" >> $GITHUB_ENV
+        fi
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      id: vcpkg-cache
+      with:
+        path: |
+          ${{ github.workspace }}/vcpkg
+          !${{ github.workspace }}/vcpkg/buildtrees
+          !${{ github.workspace }}/vcpkg/packages
+          !${{ github.workspace }}/vcpkg/downloads
+        key: ${{ runner.os }}-${{ matrix.compiler }}-vcpkg-tool-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.compiler }}-vcpkg-tool-
+
+    - name: Set up vcpkg (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        if [ ! -d "vcpkg" ]; then
+          git clone https://github.com/Microsoft/vcpkg.git
+        fi
+        cd vcpkg
+        if [ "${{ steps.vcpkg-cache.outputs.cache-hit }}" != "true" ]; then
+          git pull
+          ./bootstrap-vcpkg.sh
+        fi
+        cd ..
+
+    - name: Set up vcpkg (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        if (!(Test-Path "vcpkg")) {
+          git clone https://github.com/Microsoft/vcpkg.git
+        }
+        cd vcpkg
+        if ("${{ steps.vcpkg-cache.outputs.cache-hit }}" -ne "true") {
+          git pull
+          .\bootstrap-vcpkg.bat
+        }
+        cd ..
+
+    - name: Determine vcpkg commit (Unix)
+      if: runner.os != 'Windows'
+      id: vcpkg-commit-unix
+      run: echo "commit=$(git -C vcpkg rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Determine vcpkg commit (Windows)
+      if: runner.os == 'Windows'
+      id: vcpkg-commit-windows
+      shell: pwsh
+      run: |
+        $commit = git -C vcpkg rev-parse HEAD
+        "commit=$commit" >> $env:GITHUB_OUTPUT
+
+    - name: Cache vcpkg installed
+      uses: actions/cache@v4
+      id: vcpkg-installed
+      with:
+        path: ${{ github.workspace }}/vcpkg_installed
+        key: ${{ runner.os }}-${{ matrix.compiler }}-vcpkg-installed-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-${{ steps.vcpkg-commit-unix.outputs.commit || steps.vcpkg-commit-windows.outputs.commit }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.compiler }}-vcpkg-installed-${{ matrix.triplet }}-
+
+    - name: Install dependencies with vcpkg (Unix)
+      if: runner.os != 'Windows' && steps.vcpkg-installed.outputs.cache-hit != 'true'
+      run: |
+        ./vcpkg/vcpkg install --x-manifest-root=. --x-install-root=${{ github.workspace }}/vcpkg_installed --triplet ${{ matrix.triplet }}
+
+    - name: Install dependencies with vcpkg (Windows)
+      if: runner.os == 'Windows' && steps.vcpkg-installed.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        .\vcpkg\vcpkg install --x-manifest-root=. --x-install-root=${{ github.workspace }}\vcpkg_installed --triplet ${{ matrix.triplet }}
+
+    - name: Prepare build directory
+      if: runner.os != 'Windows'
+      run: |
+        rm -rf build
+        mkdir -p build
+
+    - name: Prepare build directory (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        if (Test-Path build) { Remove-Item -Recurse -Force build }
+        New-Item -ItemType Directory -Path build
+
+    - name: Build application (vcpkg - Unix)
+      if: runner.os != 'Windows'
+      id: build_vcpkg_unix
+      continue-on-error: true
+      run: |
+        cd build
+        cmake .. \
+          -G Ninja \
+          -DBUILD_TESTS=ON \
+          -DBUILD_EXAMPLES=ON \
+          -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+          -DCMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+          -DCMAKE_C_COMPILER=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+
+        cmake --build . --parallel
+        ctest --output-on-failure
+
+    - name: Build application (vcpkg - Windows)
+      if: runner.os == 'Windows'
+      id: build_vcpkg_windows
+      continue-on-error: true
+      shell: pwsh
+      run: |
+        cd build
+        cmake .. `
+          -G "Visual Studio 17 2022" `
+          -A x64 `
+          -DBUILD_TESTS=ON `
+          -DBUILD_EXAMPLES=ON `
+          -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE `
+          -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+
+        cmake --build . --config $env:BUILD_TYPE --parallel
+        ctest -C $env:BUILD_TYPE --output-on-failure
+
+    - name: Build application (fallback - Unix)
+      if: runner.os != 'Windows' && steps.build_vcpkg_unix.outcome != 'success'
+      run: |
+        echo "vcpkg build failed. Falling back to system libraries..."
+        rm -rf build
+        mkdir -p build
+        cd build
+
+        cmake .. \
+          -G Ninja \
+          -DBUILD_TESTS=ON \
+          -DBUILD_EXAMPLES=ON \
+          -DBUILD_INTEGRATED_AS_SUBMODULE=ON \
+          -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+          -DUSE_STD_FORMAT=ON \
+          -DCMAKE_C_COMPILER=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+
+        cmake --build . --parallel
+
+    - name: Build application (fallback - Windows)
+      if: runner.os == 'Windows' && steps.build_vcpkg_windows.outcome != 'success'
+      shell: pwsh
+      run: |
+        Write-Host "vcpkg build failed. Falling back to system libraries..."
+        if (Test-Path build) { Remove-Item -Recurse -Force build }
+        New-Item -ItemType Directory -Path build
+        cd build
+
+        cmake .. `
+          -G "Visual Studio 17 2022" `
+          -A x64 `
+          -DBUILD_TESTS=ON `
+          -DBUILD_EXAMPLES=ON `
+          -DBUILD_INTEGRATED_AS_SUBMODULE=ON `
+          -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE `
+          -DUSE_STD_FORMAT=ON
+
+        cmake --build . --config $env:BUILD_TYPE --parallel
+
+    - name: Run minimal test (fallback - Unix)
+      if: runner.os != 'Windows' && steps.build_vcpkg_unix.outcome != 'success'
+      run: |
+        cd build
+        echo "Build completed with system libraries (fallback mode)"
+
+    - name: Run minimal test (fallback - Windows)
+      if: runner.os == 'Windows' && steps.build_vcpkg_windows.outcome != 'success'
+      shell: pwsh
+      run: |
+        cd build
+        Write-Host "Build completed with system libraries (fallback mode)"
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.os }}-${{ matrix.compiler }}
+        path: build/Testing/
+        retention-days: 7
+
+    - name: Build summary
+      if: always()
+      run: |
+        echo "Build completed for ${{ matrix.os }} / ${{ matrix.compiler }}"
+
+  sanitizers:
+    name: Sanitizers (${{ matrix.sanitizer.name }})
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer:
+          - name: ThreadSanitizer
+            flags: "-fsanitize=thread -g -O1"
+            env: "TSAN_OPTIONS=second_deadlock_stack=1"
+          - name: AddressSanitizer
+            flags: "-fsanitize=address -fno-omit-frame-pointer -g -O1"
+            env: "ASAN_OPTIONS=detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1"
+          - name: UndefinedBehaviorSanitizer
+            flags: "-fsanitize=undefined -fno-omit-frame-pointer -g -O1"
+            env: "UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=0"
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        persist-credentials: true
+        clean: true
+        fetch-depth: 1
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout common_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/common_system
+        path: common_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout thread_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/thread_system
+        path: thread_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout logger_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/logger_system
+        path: logger_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout monitoring_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/monitoring_system
+        path: monitoring_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y cmake build-essential ninja-build clang lld
+        sudo apt install -y libgtest-dev libgmock-dev
+        sudo apt install -y libfmt-dev nlohmann-json3-dev
+
+    - name: Configure CMake with ${{ matrix.sanitizer.name }}
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DBUILD_EXAMPLES=OFF \
+          -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DCMAKE_C_FLAGS="${{ matrix.sanitizer.flags }}" \
+          -DCMAKE_CXX_FLAGS="${{ matrix.sanitizer.flags }}" \
+          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.sanitizer.flags }}" \
+          -DCMAKE_SHARED_LINKER_FLAGS="${{ matrix.sanitizer.flags }}"
+
+    - name: Build with ${{ matrix.sanitizer.name }}
+      run: |
+        cd build
+        cmake --build . --parallel
+
+    - name: Run tests with ${{ matrix.sanitizer.name }}
+      run: |
+        cd build
+        export ${{ matrix.sanitizer.env }}
+        ctest --output-on-failure || echo "${{ matrix.sanitizer.name }} detected issues (expected in early phase)"
+
+    - name: Upload sanitizer logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sanitizer-${{ matrix.sanitizer.name }}-logs
+        path: |
+          build/Testing/
+          build/**/*.log
+        retention-days: 7

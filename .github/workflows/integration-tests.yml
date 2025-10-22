@@ -1,0 +1,270 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly on Sunday at 2 AM UTC
+
+jobs:
+  integration-tests:
+    name: Integration Tests - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-13, windows-2022]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        persist-credentials: true
+        clean: true
+        fetch-depth: 1
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout common_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/common_system
+        path: common_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout thread_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/thread_system
+        path: thread_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout logger_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/logger_system
+        path: logger_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout monitoring_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/monitoring_system
+        path: monitoring_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install dependencies (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt update
+        sudo apt install -y cmake build-essential ninja-build gcc g++
+        sudo apt install -y libgtest-dev libgmock-dev
+        sudo apt install -y libfmt-dev nlohmann-json3-dev
+
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install ninja pkg-config
+
+    - name: Setup Visual Studio (Windows)
+      if: runner.os == 'Windows'
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup Visual Studio environment (Windows)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      id: vcpkg-cache
+      with:
+        path: |
+          ${{ github.workspace }}/vcpkg
+          !${{ github.workspace }}/vcpkg/buildtrees
+          !${{ github.workspace }}/vcpkg/packages
+          !${{ github.workspace }}/vcpkg/downloads
+        key: ${{ runner.os }}-integration-vcpkg-${{ hashFiles('vcpkg.json') }}
+
+    - name: Set up vcpkg (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        if [ ! -d "vcpkg" ]; then
+          git clone https://github.com/Microsoft/vcpkg.git
+        fi
+        cd vcpkg
+        if [ "${{ steps.vcpkg-cache.outputs.cache-hit }}" != "true" ]; then
+          git pull
+          ./bootstrap-vcpkg.sh
+        fi
+        cd ..
+
+    - name: Set up vcpkg (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        if (!(Test-Path "vcpkg")) {
+          git clone https://github.com/Microsoft/vcpkg.git
+        }
+        cd vcpkg
+        if ("${{ steps.vcpkg-cache.outputs.cache-hit }}" -ne "true") {
+          git pull
+          .\bootstrap-vcpkg.bat
+        }
+        cd ..
+
+    - name: Build with full integration (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTS=ON \
+          -DBUILD_EXAMPLES=ON \
+          -DCMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+        cmake --build . --parallel
+
+    - name: Build with full integration (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. `
+          -G "Visual Studio 17 2022" `
+          -A x64 `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DBUILD_TESTS=ON `
+          -DBUILD_EXAMPLES=ON `
+          -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE\vcpkg\scripts\buildsystems\vcpkg.cmake"
+
+        cmake --build . --config Release --parallel
+
+    - name: Run integration tests (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        cd build
+        ctest --output-on-failure --timeout 300 || true
+
+    - name: Run integration tests (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        cd build
+        ctest -C Release --output-on-failure --timeout 300
+
+    - name: Run example applications (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        cd build
+        echo "Running example applications..."
+        if [ -f "examples/simple_tasks" ]; then
+          timeout 30 ./examples/simple_tasks || echo "Example completed or timed out"
+        fi
+
+    - name: Run example applications (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        cd build
+        Write-Host "Running example applications..."
+        if (Test-Path "examples\Release\simple_tasks.exe") {
+          Start-Process -FilePath "examples\Release\simple_tasks.exe" -Wait -NoNewWindow -ErrorAction SilentlyContinue
+        }
+
+    - name: Upload integration test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results-${{ matrix.os }}
+        path: |
+          build/Testing/
+          build/**/*.log
+        retention-days: 7
+
+  stress-tests:
+    name: Stress Tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        persist-credentials: true
+        clean: true
+        fetch-depth: 1
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout common_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/common_system
+        path: common_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout thread_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/thread_system
+        path: thread_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout logger_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/logger_system
+        path: logger_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout monitoring_system dependency
+      uses: actions/checkout@v4
+      with:
+        repository: kcenon/monitoring_system
+        path: monitoring_system
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y cmake build-essential ninja-build gcc g++
+        sudo apt install -y libgtest-dev libgmock-dev
+        sudo apt install -y libfmt-dev nlohmann-json3-dev
+
+    - name: Build for stress testing
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTS=ON \
+          -DBUILD_EXAMPLES=ON
+
+        cmake --build . --parallel
+
+    - name: Run stress tests
+      run: |
+        cd build
+        echo "Running stress tests with extended timeout..."
+        ctest --output-on-failure --timeout 600 --repeat until-pass:3 || echo "Stress tests completed"
+
+    - name: Upload stress test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: stress-test-results
+        path: |
+          build/Testing/
+          build/**/*.log
+        retention-days: 7

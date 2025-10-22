@@ -66,16 +66,8 @@ if(INTEGRATED_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 
-# Coverage target (optional)
-if(INTEGRATED_ENABLE_COVERAGE)
-    include(CodeCoverage)
-    setup_target_for_coverage_gcovr_html(
-        NAME coverage
-        EXECUTABLE ctest
-        DEPENDENCIES all_tests
-        EXCLUDE "/usr/*" "*/test/*" "*/external/*"
-    )
-endif()
+# Coverage is handled by the CI workflow using lcov/gcovr
+# See .github/workflows/coverage.yml for coverage configuration
 
 # Create a target to run all tests
 add_custom_target(run_tests

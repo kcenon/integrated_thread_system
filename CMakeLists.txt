@@ -86,10 +86,12 @@ if(BUILD_WITH_COMMON_SYSTEM)
     find_package(common_system CONFIG QUIET)
 
     if(NOT common_system_FOUND)
-        # Check for common_system in sibling directory
+        # Check for common_system with prioritized search paths
         set(_INTEGRATED_COMMON_PATHS
-            "${CMAKE_CURRENT_SOURCE_DIR}/../common_system/include"
-            "${CMAKE_CURRENT_SOURCE_DIR}/common_system/include"
+            "/Users/dongcheolshin/Sources/common_system/include"      # macOS development (HIGHEST PRIORITY)
+            "/home/${USER}/Sources/common_system/include"              # Linux development
+            "${CMAKE_CURRENT_SOURCE_DIR}/../common_system/include"     # Sibling directory (fallback for CI)
+            "${CMAKE_CURRENT_SOURCE_DIR}/common_system/include"        # Embedded subfolder (legacy fallback)
         )
 
         foreach(_path ${_INTEGRATED_COMMON_PATHS})
@@ -143,32 +145,72 @@ if(BUILD_INTEGRATED_AS_SUBMODULE)
     message(STATUS "Building in submodule mode - using headers-only approach")
     set(EXTERNAL_SYSTEMS_AVAILABLE FALSE)
 else()
-    # Find thread_system
-    set(THREAD_SYSTEM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../thread_system)
-    if(NOT EXISTS ${THREAD_SYSTEM_DIR})
-        message(WARNING "thread_system not found at ${THREAD_SYSTEM_DIR}")
+    # Find thread_system with prioritized search paths
+    set(_THREAD_SEARCH_PATHS
+        "/Users/dongcheolshin/Sources/thread_system"           # macOS development (HIGHEST PRIORITY)
+        "/home/${USER}/Sources/thread_system"                  # Linux development
+        "${CMAKE_CURRENT_SOURCE_DIR}/../thread_system"         # Sibling directory (fallback for CI)
+    )
+
+    set(THREAD_SYSTEM_DIR "")
+    foreach(_path ${_THREAD_SEARCH_PATHS})
+        if(EXISTS "${_path}")
+            message(STATUS "Found thread_system at ${_path}")
+            set(THREAD_SYSTEM_DIR "${_path}")
+            set(EXTERNAL_SYSTEMS_AVAILABLE TRUE)
+            break()
+        endif()
+    endforeach()
+
+    if(NOT THREAD_SYSTEM_DIR)
+        message(WARNING "thread_system not found in any search path")
         set(EXTERNAL_SYSTEMS_AVAILABLE FALSE)
-    else()
-        message(STATUS "Found thread_system at ${THREAD_SYSTEM_DIR}")
-        set(EXTERNAL_SYSTEMS_AVAILABLE TRUE)
     endif()
 
-    # Find logger_system
-    set(LOGGER_SYSTEM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../logger_system)
-    if(NOT EXISTS ${LOGGER_SYSTEM_DIR} AND EXTERNAL_SYSTEMS_AVAILABLE)
-        message(WARNING "logger_system not found at ${LOGGER_SYSTEM_DIR}")
-        set(EXTERNAL_SYSTEMS_AVAILABLE FALSE)
-    else()
-        message(STATUS "Found logger_system at ${LOGGER_SYSTEM_DIR}")
+    # Find logger_system with prioritized search paths
+    if(EXTERNAL_SYSTEMS_AVAILABLE)
+        set(_LOGGER_SEARCH_PATHS
+            "/Users/dongcheolshin/Sources/logger_system"       # macOS development (HIGHEST PRIORITY)
+            "/home/${USER}/Sources/logger_system"              # Linux development
+            "${CMAKE_CURRENT_SOURCE_DIR}/../logger_system"     # Sibling directory (fallback for CI)
+        )
+
+        set(LOGGER_SYSTEM_DIR "")
+        foreach(_path ${_LOGGER_SEARCH_PATHS})
+            if(EXISTS "${_path}")
+                message(STATUS "Found logger_system at ${_path}")
+                set(LOGGER_SYSTEM_DIR "${_path}")
+                break()
+            endif()
+        endforeach()
+
+        if(NOT LOGGER_SYSTEM_DIR)
+            message(WARNING "logger_system not found in any search path")
+            set(EXTERNAL_SYSTEMS_AVAILABLE FALSE)
+        endif()
     endif()
 
-    # Find monitoring_system
-    set(MONITORING_SYSTEM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../monitoring_system)
-    if(NOT EXISTS ${MONITORING_SYSTEM_DIR} AND EXTERNAL_SYSTEMS_AVAILABLE)
-        message(WARNING "monitoring_system not found at ${MONITORING_SYSTEM_DIR}")
-        set(EXTERNAL_SYSTEMS_AVAILABLE FALSE)
-    else()
-        message(STATUS "Found monitoring_system at ${MONITORING_SYSTEM_DIR}")
+    # Find monitoring_system with prioritized search paths
+    if(EXTERNAL_SYSTEMS_AVAILABLE)
+        set(_MONITORING_SEARCH_PATHS
+            "/Users/dongcheolshin/Sources/monitoring_system"   # macOS development (HIGHEST PRIORITY)
+            "/home/${USER}/Sources/monitoring_system"          # Linux development
+            "${CMAKE_CURRENT_SOURCE_DIR}/../monitoring_system" # Sibling directory (fallback for CI)
+        )
+
+        set(MONITORING_SYSTEM_DIR "")
+        foreach(_path ${_MONITORING_SEARCH_PATHS})
+            if(EXISTS "${_path}")
+                message(STATUS "Found monitoring_system at ${_path}")
+                set(MONITORING_SYSTEM_DIR "${_path}")
+                break()
+            endif()
+        endforeach()
+
+        if(NOT MONITORING_SYSTEM_DIR)
+            message(WARNING "monitoring_system not found in any search path")
+            set(EXTERNAL_SYSTEMS_AVAILABLE FALSE)
+        endif()
     endif()
 endif()
 

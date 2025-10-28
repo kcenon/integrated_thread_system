@@ -73,7 +73,7 @@ TEST_F(ImprovedBasicOperationsTest, MultipleTasksWithProgress) {
     std::cout << "Submitting " << num_tasks << " tasks..." << std::endl;
 
     for (int i = 0; i < num_tasks; ++i) {
-        system_->submit([&, i]() {
+        system_->submit([&]() {
             // Simulate work
             std::this_thread::sleep_for(1ms);
             completed++;
@@ -216,8 +216,6 @@ TEST_F(ImprovedBasicOperationsTest, StressTestWithAutomaticScaling) {
 
     std::atomic<int> completed{0};
     std::vector<int> results(num_tasks);
-
-    auto start = std::chrono::steady_clock::now();
 
     for (int i = 0; i < num_tasks; ++i) {
         system_->submit([&, i]() {

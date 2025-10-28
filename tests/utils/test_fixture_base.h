@@ -233,8 +233,6 @@ protected:
      */
     template<typename Func>
     double measure_throughput(int num_tasks, Func&& task_func) {
-        auto start = std::chrono::steady_clock::now();
-
         auto result = submit_and_wait(num_tasks, std::forward<Func>(task_func));
 
         if (!result.success) {

@@ -1,5 +1,9 @@
-#ifndef KCENON_INTEGRATED_PATTERNS_INTEGRATION_PATTERNS_H
-#define KCENON_INTEGRATED_PATTERNS_INTEGRATION_PATTERNS_H
+/**
+ * @file integration_patterns.h
+ * @brief Common integration patterns for the integrated thread system ecosystem
+ */
+
+#pragma once
 
 namespace kcenon::integrated::patterns {
 
@@ -26,5 +30,3 @@ template<typename Func>
 class retry_policy;
 
 } // namespace kcenon::integrated::patterns
-
-#endif // KCENON_INTEGRATED_PATTERNS_INTEGRATION_PATTERNS_H

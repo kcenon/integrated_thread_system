@@ -1,5 +1,9 @@
-#ifndef KCENON_INTEGRATED_FRAMEWORK_APPLICATION_H
-#define KCENON_INTEGRATED_FRAMEWORK_APPLICATION_H
+/**
+ * @file application.h
+ * @brief Main application framework for integrated thread system
+ */
+
+#pragma once
 
 #include <memory>
 #include <string>
@@ -46,5 +50,3 @@ private:
 };
 
 } // namespace kcenon::integrated::framework
-
-#endif // KCENON_INTEGRATED_FRAMEWORK_APPLICATION_H

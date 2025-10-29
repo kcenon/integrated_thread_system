@@ -18,7 +18,7 @@
 
 namespace kcenon::integrated {
 
-using namespace thread;
+// Note: Fully qualify types from thread:: namespace instead of 'using namespace'
 
 /**
  * @brief Error severity levels

@@ -17,8 +17,8 @@
 
 namespace kcenon::testing {
 
-using namespace integrated;
-using namespace thread;
+// Note: Fully qualify types from integrated:: and thread:: namespaces
+// instead of using 'using namespace' directives
 
 /**
  * @brief Test result status

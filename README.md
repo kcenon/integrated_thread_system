@@ -3,11 +3,12 @@
 <div align="center">
 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
-[![Ubuntu-GCC](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-gcc.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-gcc.yaml)
-[![Ubuntu-Clang](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-clang.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-clang.yaml)
-[![Windows-VS](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-vs.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-vs.yaml)
-[![Windows-MSYS2](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-msys2.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-msys2.yaml)
+[![CI](https://github.com/kcenon/integrated_thread_system/actions/workflows/ci.yml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/ci.yml)
+[![Coverage](https://github.com/kcenon/integrated_thread_system/actions/workflows/coverage.yml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/coverage.yml)
+[![Static Analysis](https://github.com/kcenon/integrated_thread_system/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/static-analysis.yml)
+[![Integration Tests](https://github.com/kcenon/integrated_thread_system/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/integration-tests.yml)
 [![Doxygen](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-Doxygen.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-Doxygen.yaml)
 
 **Enterprise-Grade Threading Framework with Zero-Configuration Setup**
@@ -445,14 +446,17 @@ unified_thread_system system(cfg);
 
 ### Supported Platforms & Compilers
 
-| Platform | Compiler | Version | Status | CI/CD | Notes |
-|----------|----------|---------|--------|-------|-------|
-| **Ubuntu 22.04+** | GCC | 11+ | ✅ Fully Tested | [![Ubuntu-GCC](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-gcc.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-gcc.yaml) | Primary development platform |
-| **Ubuntu 22.04+** | Clang | 14+ | ✅ Fully Tested | [![Ubuntu-Clang](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-clang.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-ubuntu-clang.yaml) | Full C++20 support |
-| **Windows 10+** | MSVC | 2019+ | ✅ Fully Tested | [![Windows-VS](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-vs.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-vs.yaml) | Visual Studio 2019/2022 |
-| **Windows 10+** | MSYS2 (GCC) | 11+ | ✅ Fully Tested | [![Windows-MSYS2](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-msys2.yaml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/build-windows-msys2.yaml) | MinGW-w64 toolchain |
-| **macOS 13+** | Apple Clang | 14+ | ✅ Tested | - | Intel and Apple Silicon (M1/M2/M3) |
-| **Linux (Other)** | GCC/Clang | 11+/14+ | ✅ Expected | - | Should work on most modern distros |
+All platforms are tested via unified CI/CD pipeline using GitHub Actions matrix strategy.
+
+| Platform | Compiler | Version | Status | Notes |
+|----------|----------|---------|--------|-------|
+| **Ubuntu 22.04** | GCC | 11+ | ✅ Fully Tested | Primary development platform |
+| **Ubuntu 22.04** | Clang | 14+ | ✅ Fully Tested | Full C++20 support |
+| **macOS 13** | Apple Clang | 14+ | ✅ Fully Tested | Intel and Apple Silicon (M1/M2/M3) |
+| **Windows 2022** | MSVC | 2019+ | ✅ Fully Tested | Visual Studio 2019/2022 |
+| **Linux (Other)** | GCC/Clang | 11+/14+ | ✅ Expected | Should work on most modern distros |
+
+**CI/CD Status**: [![CI](https://github.com/kcenon/integrated_thread_system/actions/workflows/ci.yml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/ci.yml)
 
 ### Architecture Support
 

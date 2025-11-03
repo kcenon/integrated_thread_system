@@ -392,6 +392,22 @@ endif()
 # Link Dependencies
 ##################################################
 
+# Link external systems if available
+if(EXTERNAL_SYSTEMS_AVAILABLE)
+    # Try to find thread_system library
+    find_library(THREAD_SYSTEM_LIB
+        NAMES ThreadSystem libThreadSystem
+        PATHS ${THREAD_SYSTEM_DIR}/build/lib
+        NO_DEFAULT_PATH
+    )
+
+    if(THREAD_SYSTEM_LIB)
+        message(STATUS "Found ThreadSystem library: ${THREAD_SYSTEM_LIB}")
+    else()
+        message(WARNING "ThreadSystem library not found, will link with header-only approach")
+    endif()
+endif()
+
 target_link_libraries(integrated_thread_system
     PUBLIC
         Threads::Threads
@@ -405,6 +421,13 @@ target_link_libraries(integrated_thread_system_enhanced
     PRIVATE
         fmt::fmt
 )
+
+# Link thread_system if available
+if(EXTERNAL_SYSTEMS_AVAILABLE AND THREAD_SYSTEM_LIB)
+    target_link_libraries(integrated_thread_system PRIVATE ${THREAD_SYSTEM_LIB})
+    target_link_libraries(integrated_thread_system_enhanced PRIVATE ${THREAD_SYSTEM_LIB})
+    message(STATUS "Linking ThreadSystem library")
+endif()
 
 # Note: nlohmann_json is header-only and included via PRIVATE include directories
 # No link dependency needed, avoiding export set issues

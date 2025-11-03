@@ -32,16 +32,27 @@ enum class log_level {
 };
 
 /**
+ * @brief Thread pool type enumeration
+ */
+enum class thread_pool_type {
+    standard,      // Use standard thread_pool
+    typed,         // Use typed_thread_pool with priority support
+};
+
+/**
  * @brief Thread pool configuration
  */
 struct thread_config {
     std::string name = "IntegratedThreadPool";
+    std::string pool_name = "integrated_pool";  // Internal pool name
+    thread_pool_type pool_type = thread_pool_type::standard;
     std::size_t thread_count = 0;  // 0 = auto-detect
     std::size_t max_queue_size = 10000;
     bool enable_work_stealing = true;
     bool enable_dynamic_scaling = false;
     std::size_t min_threads = 1;
     std::size_t max_threads = 0;  // 0 = no limit
+    bool enable_priority_scheduling = false;  // Enable for typed_thread_pool
 };
 
 /**

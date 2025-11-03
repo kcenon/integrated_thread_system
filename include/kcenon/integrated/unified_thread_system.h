@@ -281,10 +281,29 @@ public:
     }
 
     /**
+     * @brief Create a new cancellation token
+     * @return Token that can be used to cancel operations
+     */
+    std::shared_ptr<void> create_cancellation_token();
+
+    /**
+     * @brief Cancel operations associated with a token
+     * @param token Token to cancel
+     */
+    void cancel_token(std::shared_ptr<void> token);
+
+    /**
      * @brief Cancellable task submission
      */
     template<typename F, typename... Args>
     auto submit_cancellable(cancellation_token& token, F&& f, Args&&... args)
+        -> std::future<std::invoke_result_t<F, Args...>>;
+
+    /**
+     * @brief Cancellable task submission with thread_system integration
+     */
+    template<typename F, typename... Args>
+    auto submit_cancellable(std::shared_ptr<void> token, F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
     /**
@@ -336,6 +355,7 @@ private:
     // Internal methods
     void submit_internal(std::function<void()> task);
     void submit_priority_internal(int priority, std::function<void()> task);
+    void submit_cancellable_internal(std::shared_ptr<void> token, std::function<void()> task);
     void schedule_internal(std::chrono::milliseconds delay, std::function<void()> task);
     size_t schedule_recurring_internal(std::chrono::milliseconds interval, std::function<void()> task);
     template<typename... Args>
@@ -402,6 +422,22 @@ auto unified_thread_system::submit_cancellable(cancellation_token& token, F&& f,
 
     auto result = task->get_future();
     submit_internal([task]() { (*task)(); });
+
+    return result;
+}
+
+template<typename F, typename... Args>
+auto unified_thread_system::submit_cancellable(std::shared_ptr<void> token, F&& f, Args&&... args)
+    -> std::future<std::invoke_result_t<F, Args...>> {
+    using return_type = std::invoke_result_t<F, Args...>;
+
+    auto task = std::make_shared<std::packaged_task<return_type()>>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+    );
+
+    auto result = task->get_future();
+
+    submit_cancellable_internal(token, [task]() { (*task)(); });
 
     return result;
 }

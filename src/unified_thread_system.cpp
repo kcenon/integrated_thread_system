@@ -205,6 +205,38 @@ public:
         return plugin_manager_->list_plugins();
     }
 
+    std::shared_ptr<void> create_cancellation_token() {
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        if (!thread_adapter) {
+            throw std::runtime_error("Thread adapter not available");
+        }
+        return thread_adapter->create_cancellation_token();
+    }
+
+    void cancel_token(std::shared_ptr<void> token) {
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        if (!thread_adapter) {
+            throw std::runtime_error("Thread adapter not available");
+        }
+        thread_adapter->cancel_token(token);
+    }
+
+    void submit_cancellable_internal(std::shared_ptr<void> token, std::function<void()> task) {
+        if (shutting_down_) {
+            throw std::runtime_error("System is shutting down");
+        }
+
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        if (!thread_adapter) {
+            throw std::runtime_error("Thread adapter not available");
+        }
+
+        // Submit via thread_adapter's cancel-aware submission
+        auto future = thread_adapter->submit_cancellable(token, std::move(task));
+        // Let the future go out of scope - we don't need to wait for it
+        (void)future;
+    }
+
 private:
     config config_;
     std::atomic<bool> shutting_down_;
@@ -228,6 +260,10 @@ void unified_thread_system::submit_internal(std::function<void()> task) {
 
 void unified_thread_system::submit_priority_internal(int priority, std::function<void()> task) {
     pimpl_->submit_priority_internal(priority, std::move(task));
+}
+
+void unified_thread_system::submit_cancellable_internal(std::shared_ptr<void> token, std::function<void()> task) {
+    pimpl_->submit_cancellable_internal(token, std::move(task));
 }
 
 void unified_thread_system::schedule_internal(std::chrono::milliseconds delay, std::function<void()> task) {
@@ -296,6 +332,14 @@ std::string unified_thread_system::export_metrics_prometheus() const {
 
 void unified_thread_system::cancel_recurring(size_t task_id) {
     pimpl_->cancel_recurring(task_id);
+}
+
+std::shared_ptr<void> unified_thread_system::create_cancellation_token() {
+    return pimpl_->create_cancellation_token();
+}
+
+void unified_thread_system::cancel_token(std::shared_ptr<void> token) {
+    pimpl_->cancel_token(token);
 }
 
 size_t unified_thread_system::subscribe_to_events(const std::string& event_type, event_callback callback) {

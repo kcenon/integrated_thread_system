@@ -79,6 +79,7 @@ struct monitoring_config {
     bool enable_opentelemetry_export = false;
     double cpu_threshold = 80.0;
     double memory_threshold = 90.0;
+    std::size_t max_samples_per_metric = 10000;  // Maximum samples to store per metric
 };
 
 /**

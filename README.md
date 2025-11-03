@@ -55,8 +55,12 @@ This project is the **unified integration** of three specialized, battle-tested 
 - Adaptive job queues with automatic optimization
 - Hazard pointer memory reclamation
 - Work-stealing architecture
+- Job cancellation support with cancellation tokens
 
 **Integration:** Core threading primitives that power all async operations
+- Uses `thread_pool` and `typed_thread_pool` for task execution
+- Supports both standard and priority-based scheduling
+- Integrates cancellation tokens for graceful task termination
 
 #### 2. **[logger_system](https://github.com/kcenon/logger_system)** - Observability
 **What it provides:**
@@ -67,6 +71,9 @@ This project is the **unified integration** of three specialized, battle-tested 
 - Thread-safe by design
 
 **Integration:** Automatic logging for thread pool operations, job execution, and errors
+- Uses async `logger` with 8KB buffer for high-performance logging
+- Integrates `console_writer` and `file_writer` for flexible output
+- Supports all log levels with automatic conversion (trace through fatal)
 
 #### 3. **[monitoring_system](https://github.com/kcenon/monitoring_system)** - Telemetry
 **What it provides:**
@@ -75,8 +82,13 @@ This project is the **unified integration** of three specialized, battle-tested 
 - Prometheus/JSON export
 - System resource monitoring (CPU, memory)
 - Custom metric collection
+- Statistical profiling (mean, p95, p99)
 
 **Integration:** Live dashboards showing thread pool utilization, throughput, and system health
+- Uses `performance_profiler` for statistical analysis of operations
+- Integrates `system_monitor` for real-time CPU and memory tracking
+- Provides comprehensive metrics with mean duration, p95 latency, and call counts
+- Monitors system health with configurable thresholds (90% CPU/memory warnings)
 
 #### 4. **[common_system](https://github.com/kcenon/common_system)** - Foundation
 **What it provides:**

@@ -145,25 +145,73 @@ Submits a low-priority background task.
 
 ### Cancellation Support
 
+#### `create_cancellation_token`
+```cpp
+std::shared_ptr<void> create_cancellation_token();
+```
+Creates a new cancellation token for controlling task execution.
+
+**Returns:** Type-erased cancellation token (internally uses `kcenon::thread::cancellation_token` when thread_system is available)
+
+#### `cancel_token`
+```cpp
+void cancel_token(std::shared_ptr<void> token);
+```
+Cancels a previously created token, signaling all associated tasks to stop.
+
+**Parameters:**
+- `token`: Cancellation token created by `create_cancellation_token()`
+
+#### `is_token_cancelled`
+```cpp
+bool is_token_cancelled(std::shared_ptr<void> token);
+```
+Checks if a token has been cancelled.
+
+**Returns:** `true` if token is cancelled, `false` otherwise
+
 #### `submit_cancellable`
 ```cpp
 template<typename F, typename... Args>
-auto submit_cancellable(cancellation_token& token, F&& f, Args&&... args)
+auto submit_cancellable(std::shared_ptr<void> token, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>>;
 ```
-Submits a task that can be cancelled.
+Submits a task that can be cancelled via the provided token.
+
+**Parameters:**
+- `token`: Cancellation token from `create_cancellation_token()`
+- `f`: Function or callable to execute
+- `args`: Arguments to pass to the function
+
+**Returns:** `std::future` containing the result
 
 **Example:**
 ```cpp
-cancellation_token token;
+// Create cancellation token
+auto token = system.create_cancellation_token();
+
 auto future = system.submit_cancellable(token, []() {
     // Long-running task
     return process_data();
 });
 
 // Cancel if needed
-token.cancel();
+system.cancel_token(token);
+
+try {
+    auto result = future.get();
+} catch (const std::runtime_error& e) {
+    // Task was cancelled before execution
+    std::cout << "Task cancelled: " << e.what() << std::endl;
+}
 ```
+
+**Implementation Details:**
+- Uses `kcenon::thread::cancellation_token` when thread_system is available
+- Falls back to `std::atomic<bool>` when external systems are not available
+- Type erasure via `std::shared_ptr<void>` allows both implementations
+- Tasks check cancellation status before execution
+- Throws `std::runtime_error` if task is cancelled before starting
 
 ### Scheduled Execution
 

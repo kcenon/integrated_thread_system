@@ -120,33 +120,76 @@ int main() {
 ```
 
 ### 5. Cancellable Tasks
-Tasks that can be cancelled during execution:
+Tasks that can be cancelled during execution using integrated thread_system cancellation tokens:
 
 ```cpp
 int main() {
     unified_thread_system system;
-    cancellation_token token;
 
+    // Create cancellation token
+    auto token = system.create_cancellation_token();
+
+    // Submit cancellable task
     auto future = system.submit_cancellable(token, []() {
         for (int i = 0; i < 100; ++i) {
             // Simulate long-running work
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-            // In real code, check cancellation periodically
-            if (/* check if should stop */) {
-                return -1;
-            }
+            // Note: Cancellation is checked before task execution
+            // For cooperative cancellation during execution,
+            // the task function should check token status periodically
+            std::cout << "Processing iteration " << i << std::endl;
         }
         return 100;
     });
 
     // Cancel after 50ms
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    token.cancel();
+    system.cancel_token(token);
+
+    try {
+        int result = future.get();
+        std::cout << "Task completed with result: " << result << std::endl;
+    } catch (const std::runtime_error& e) {
+        // Task was cancelled before execution started
+        std::cout << "Task was cancelled: " << e.what() << std::endl;
+    }
+
+    return 0;
+}
+```
+
+**Advanced: Cooperative Cancellation**
+For tasks that need to check cancellation status during execution:
+
+```cpp
+int main() {
+    unified_thread_system system;
+    auto token = system.create_cancellation_token();
+
+    auto future = system.submit_cancellable(token, [&system, token]() {
+        for (int i = 0; i < 100; ++i) {
+            // Check cancellation status during execution
+            if (system.is_token_cancelled(token)) {
+                std::cout << "Task cancelled at iteration " << i << std::endl;
+                return -1;  // Return early on cancellation
+            }
+
+            // Do work
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        return 100;
+    });
+
+    // Cancel after 50ms
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    system.cancel_token(token);
 
     int result = future.get();
     if (result == -1) {
-        std::cout << "Task was cancelled" << std::endl;
+        std::cout << "Task was cooperatively cancelled" << std::endl;
+    } else {
+        std::cout << "Task completed normally: " << result << std::endl;
     }
 
     return 0;

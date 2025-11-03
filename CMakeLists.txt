@@ -419,6 +419,19 @@ if(EXTERNAL_SYSTEMS_AVAILABLE)
     else()
         message(WARNING "LoggerSystem library not found, will link with header-only approach")
     endif()
+
+    # Try to find monitoring_system library
+    find_library(MONITORING_SYSTEM_LIB
+        NAMES MonitoringSystem libMonitoringSystem
+        PATHS ${MONITORING_SYSTEM_DIR}/build/lib
+        NO_DEFAULT_PATH
+    )
+
+    if(MONITORING_SYSTEM_LIB)
+        message(STATUS "Found MonitoringSystem library: ${MONITORING_SYSTEM_LIB}")
+    else()
+        message(WARNING "MonitoringSystem library not found, will link with header-only approach")
+    endif()
 endif()
 
 target_link_libraries(integrated_thread_system
@@ -447,6 +460,13 @@ if(EXTERNAL_SYSTEMS_AVAILABLE AND LOGGER_SYSTEM_LIB)
     target_link_libraries(integrated_thread_system PRIVATE ${LOGGER_SYSTEM_LIB})
     target_link_libraries(integrated_thread_system_enhanced PRIVATE ${LOGGER_SYSTEM_LIB})
     message(STATUS "Linking LoggerSystem library")
+endif()
+
+# Link monitoring_system if available
+if(EXTERNAL_SYSTEMS_AVAILABLE AND MONITORING_SYSTEM_LIB)
+    target_link_libraries(integrated_thread_system PRIVATE ${MONITORING_SYSTEM_LIB})
+    target_link_libraries(integrated_thread_system_enhanced PRIVATE ${MONITORING_SYSTEM_LIB})
+    message(STATUS "Linking MonitoringSystem library")
 endif()
 
 # Note: nlohmann_json is header-only and included via PRIVATE include directories

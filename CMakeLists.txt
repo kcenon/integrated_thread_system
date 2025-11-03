@@ -406,6 +406,19 @@ if(EXTERNAL_SYSTEMS_AVAILABLE)
     else()
         message(WARNING "ThreadSystem library not found, will link with header-only approach")
     endif()
+
+    # Try to find logger_system library
+    find_library(LOGGER_SYSTEM_LIB
+        NAMES LoggerSystem libLoggerSystem
+        PATHS ${LOGGER_SYSTEM_DIR}/build/lib
+        NO_DEFAULT_PATH
+    )
+
+    if(LOGGER_SYSTEM_LIB)
+        message(STATUS "Found LoggerSystem library: ${LOGGER_SYSTEM_LIB}")
+    else()
+        message(WARNING "LoggerSystem library not found, will link with header-only approach")
+    endif()
 endif()
 
 target_link_libraries(integrated_thread_system
@@ -427,6 +440,13 @@ if(EXTERNAL_SYSTEMS_AVAILABLE AND THREAD_SYSTEM_LIB)
     target_link_libraries(integrated_thread_system PRIVATE ${THREAD_SYSTEM_LIB})
     target_link_libraries(integrated_thread_system_enhanced PRIVATE ${THREAD_SYSTEM_LIB})
     message(STATUS "Linking ThreadSystem library")
+endif()
+
+# Link logger_system if available
+if(EXTERNAL_SYSTEMS_AVAILABLE AND LOGGER_SYSTEM_LIB)
+    target_link_libraries(integrated_thread_system PRIVATE ${LOGGER_SYSTEM_LIB})
+    target_link_libraries(integrated_thread_system_enhanced PRIVATE ${LOGGER_SYSTEM_LIB})
+    message(STATUS "Linking LoggerSystem library")
 endif()
 
 # Note: nlohmann_json is header-only and included via PRIVATE include directories

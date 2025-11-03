@@ -4,16 +4,18 @@
 
 #include <kcenon/integrated/adapters/logger_adapter.h>
 
-// Note: Currently using built-in console logger for simplicity.
-// External logger_system integration can be enabled for file output, rotation, and remote logging.
-// #if EXTERNAL_SYSTEMS_AVAILABLE
-// #include <kcenon/logger/core/logger.h>
-// #endif
-
+#if EXTERNAL_SYSTEMS_AVAILABLE
+// Use external logger_system's logger
+#include <kcenon/logger/core/logger.h>
+#include <kcenon/logger/writers/console_writer.h>
+#include <kcenon/logger/writers/file_writer.h>
+#else
+// Fallback to built-in implementation
 #include <iostream>
 #include <mutex>
 #include <iomanip>
 #include <chrono>
+#endif
 
 namespace kcenon::integrated::adapters {
 
@@ -37,13 +39,56 @@ public:
 
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
-            // External logger_system integration would go here
-            // Would provide: file output, log rotation, remote logging, structured logging
-#endif
+            // Create logger_system's logger with async support
+            logger_ = std::make_unique<kcenon::logger::logger>(
+                true,  // async mode for better performance
+                8192   // buffer size
+            );
 
-            // Built-in console logger
+            // Add console writer if enabled
+            if (config_.enable_console_logging) {
+                auto console_writer = std::make_unique<kcenon::logger::console_writer>();
+                auto add_result = logger_->add_writer(std::move(console_writer));
+                if (!add_result) {
+                    return common::VoidResult::err(
+                        common::error_codes::INTERNAL_ERROR,
+                        "Failed to add console writer"
+                    );
+                }
+            }
+
+            // Add file writer if enabled
+            if (config_.enable_file_logging) {
+                std::string log_file = config_.log_directory + "/integrated_thread_system.log";
+                auto file_writer = std::make_unique<kcenon::logger::file_writer>(log_file);
+                auto add_result = logger_->add_writer(std::move(file_writer));
+                if (!add_result) {
+                    return common::VoidResult::err(
+                        common::error_codes::INTERNAL_ERROR,
+                        "Failed to add file writer"
+                    );
+                }
+            }
+
+            // Convert log_level from integrated config to logger_system's log_level
+            logger_->set_min_level(convert_log_level(config_.min_log_level));
+
+            // Start the logger
+            auto start_result = logger_->start();
+            if (!start_result) {
+                return common::VoidResult::err(
+                    common::error_codes::INTERNAL_ERROR,
+                    "Failed to start logger"
+                );
+            }
+
             initialized_ = true;
             return common::ok();
+#else
+            // Built-in console logger (fallback)
+            initialized_ = true;
+            return common::ok();
+#endif
         } catch (const std::exception& e) {
             return common::VoidResult::err(
                 common::error_codes::INTERNAL_ERROR,
@@ -57,7 +102,22 @@ public:
             return common::ok();
         }
 
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        if (logger_) {
+            flush();
+            auto stop_result = logger_->stop();
+            if (!stop_result) {
+                return common::VoidResult::err(
+                    common::error_codes::INTERNAL_ERROR,
+                    "Failed to stop logger"
+                );
+            }
+            logger_.reset();
+        }
+#else
         flush();
+#endif
+
         initialized_ = false;
         return common::ok();
     }
@@ -71,8 +131,14 @@ public:
             return;
         }
 
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        if (logger_) {
+            logger_->log(convert_log_level(level), message);
+        }
+#else
         std::lock_guard<std::mutex> lock(log_mutex_);
         print_log(level, message);
+#endif
     }
 
     void log(log_level level, const std::string& message,
@@ -81,17 +147,47 @@ public:
             return;
         }
 
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        if (logger_) {
+            logger_->log(convert_log_level(level), message, file, line, function);
+        }
+#else
         std::lock_guard<std::mutex> lock(log_mutex_);
         print_log(level, message, file, line, function);
+#endif
     }
 
     void flush() {
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        if (logger_) {
+            logger_->flush();
+        }
+#else
         std::lock_guard<std::mutex> lock(log_mutex_);
         std::cout.flush();
         std::cerr.flush();
+#endif
     }
 
 private:
+#if EXTERNAL_SYSTEMS_AVAILABLE
+    // Convert integrated log_level to logger_system's log_level
+    // Note: logger_system uses thread::log_level when USE_THREAD_SYSTEM_INTEGRATION is defined
+    kcenon::logger::log_level convert_log_level(log_level level) const {
+        switch (level) {
+            case log_level::trace: return kcenon::logger::log_level::trace;
+            case log_level::debug: return kcenon::logger::log_level::debug;
+            case log_level::info: return kcenon::logger::log_level::info;
+            case log_level::warning: return kcenon::logger::log_level::warning;
+            case log_level::error: return kcenon::logger::log_level::error;
+            case log_level::critical: return kcenon::logger::log_level::critical;
+            case log_level::fatal:
+                // thread::log_level doesn't have fatal, use critical instead
+                return kcenon::logger::log_level::critical;
+            default: return kcenon::logger::log_level::info;
+        }
+    }
+#else
     std::string level_to_string(log_level level) const {
         switch (level) {
             case log_level::trace: return "TRACE";
@@ -129,10 +225,18 @@ private:
 
         out << message << std::endl;
     }
+#endif
 
     logger_config config_;
     bool initialized_;
+
+#if EXTERNAL_SYSTEMS_AVAILABLE
+    // External logger_system integration
+    std::unique_ptr<kcenon::logger::logger> logger_;
+#else
+    // Built-in implementation
     mutable std::mutex log_mutex_;
+#endif
 };
 
 // logger_adapter implementation

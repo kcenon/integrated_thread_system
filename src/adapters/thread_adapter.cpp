@@ -4,17 +4,19 @@
 
 #include <kcenon/integrated/adapters/thread_adapter.h>
 
-// Note: Currently using built-in thread pool implementation for simplicity and zero dependencies.
-// External thread_system integration can be enabled by uncommenting below and implementing
-// the integration in the #if EXTERNAL_SYSTEMS_AVAILABLE block.
-// #if EXTERNAL_SYSTEMS_AVAILABLE
-// #include <kcenon/thread/core/typed_thread_pool.h>
-// #endif
-
+#if EXTERNAL_SYSTEMS_AVAILABLE
+// Use external thread_system's thread_pool
+#include <kcenon/thread/core/thread_pool.h>
+#include <kcenon/thread/core/thread_worker.h>
+#include <kcenon/thread/core/cancellation_token.h>
+#include <kcenon/thread/interfaces/thread_context.h>
+#else
+// Fallback to built-in implementation
 #include <thread>
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#endif
 
 namespace kcenon::integrated::adapters {
 
@@ -26,7 +28,10 @@ public:
     explicit impl(const thread_config& config)
         : config_(config)
         , initialized_(false)
-        , shutdown_(false) {
+#if !EXTERNAL_SYSTEMS_AVAILABLE
+        , shutdown_(false)
+#endif
+    {
     }
 
     ~impl() {
@@ -42,12 +47,50 @@ public:
 
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
-            // External thread_system integration would go here
-            // Would provide: priority scheduling, typed pools, job cancellation
-            // Current built-in implementation is sufficient for most use cases
-#endif
+            // Use external thread_system's thread_pool
+            std::size_t thread_count = config_.thread_count;
+            if (thread_count == 0) {
+                thread_count = std::thread::hardware_concurrency();
+                if (thread_count == 0) {
+                    thread_count = 4;  // Fallback default
+                }
+            }
 
-            // Built-in thread pool implementation
+            // Create thread_pool with specified worker count
+            thread_pool_ = std::make_shared<kcenon::thread::thread_pool>(
+                config_.pool_name.empty() ? "integrated_pool" : config_.pool_name
+            );
+
+            // Add worker threads - thread_pool doesn't auto-create workers
+            for (std::size_t i = 0; i < thread_count; ++i) {
+                auto worker = std::make_unique<kcenon::thread::thread_worker>(
+                    true,  // use_time_tag
+                    kcenon::thread::thread_context()  // default context
+                );
+                worker->set_job_queue(thread_pool_->get_job_queue());
+
+                auto enqueue_result = thread_pool_->enqueue(std::move(worker));
+                if (enqueue_result.has_error()) {
+                    return common::VoidResult::err(
+                        common::error_codes::INTERNAL_ERROR,
+                        "Failed to add worker"
+                    );
+                }
+            }
+
+            // Now start the thread pool
+            auto start_result = thread_pool_->start();
+            if (start_result.has_error()) {
+                return common::VoidResult::err(
+                    common::error_codes::INTERNAL_ERROR,
+                    "Failed to start thread pool"
+                );
+            }
+
+            initialized_ = true;
+            return common::ok();
+#else
+            // Built-in thread pool implementation (fallback)
             std::size_t thread_count = config_.thread_count;
             if (thread_count == 0) {
                 thread_count = std::thread::hardware_concurrency();
@@ -63,6 +106,7 @@ public:
 
             initialized_ = true;
             return common::ok();
+#endif
         } catch (const std::exception& e) {
             return common::VoidResult::err(
                 common::error_codes::INTERNAL_ERROR,
@@ -76,6 +120,18 @@ public:
             return common::ok();
         }
 
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        // Use thread_system's shutdown
+        bool success = thread_pool_->shutdown_pool(false);  // Graceful shutdown
+        if (!success) {
+            return common::VoidResult::err(
+                common::error_codes::INTERNAL_ERROR,
+                "Failed to stop thread pool"
+            );
+        }
+        thread_pool_.reset();
+#else
+        // Built-in implementation shutdown
         {
             std::unique_lock<std::mutex> lock(queue_mutex_);
             shutdown_ = true;
@@ -88,6 +144,7 @@ public:
             }
         }
         workers_.clear();
+#endif
 
         initialized_ = false;
         return common::ok();
@@ -105,6 +162,18 @@ public:
             );
         }
 
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        // Use thread_system's simplified submit_task API
+        bool success = thread_pool_->submit_task(std::move(task));
+        if (!success) {
+            return common::VoidResult::err(
+                common::error_codes::INTERNAL_ERROR,
+                "Failed to enqueue task"
+            );
+        }
+        return common::ok();
+#else
+        // Built-in implementation
         {
             std::unique_lock<std::mutex> lock(queue_mutex_);
 
@@ -127,32 +196,97 @@ public:
         condition_.notify_one();
 
         return common::ok();
+#endif
     }
 
     std::size_t worker_count() const {
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        return thread_pool_ ? thread_pool_->get_thread_count() : 0;
+#else
         return workers_.size();
+#endif
     }
 
     std::size_t queue_size() const {
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        return thread_pool_ ? thread_pool_->get_pending_task_count() : 0;
+#else
         std::unique_lock<std::mutex> lock(queue_mutex_);
         return task_queue_.size();
+#endif
     }
 
     void wait_for_completion() {
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        // thread_system doesn't have direct wait_for_completion
+        // We poll the queue size instead
+        while (thread_pool_ && thread_pool_->get_pending_task_count() > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+#else
         std::unique_lock<std::mutex> lock(queue_mutex_);
         completion_cv_.wait(lock, [this] {
             return task_queue_.empty() && active_tasks_ == 0;
         });
+#endif
     }
 
     bool wait_for_completion_timeout(std::chrono::milliseconds timeout) {
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        // Poll-based wait with timeout for thread_system
+        auto start = std::chrono::steady_clock::now();
+        while (thread_pool_ && thread_pool_->get_pending_task_count() > 0) {
+            auto elapsed = std::chrono::steady_clock::now() - start;
+            if (elapsed >= timeout) {
+                return false;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        return true;
+#else
         std::unique_lock<std::mutex> lock(queue_mutex_);
         return completion_cv_.wait_for(lock, timeout, [this] {
             return task_queue_.empty() && active_tasks_ == 0;
         });
+#endif
+    }
+
+    std::shared_ptr<void> create_cancellation_token() {
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        auto token = std::make_shared<kcenon::thread::cancellation_token>();
+        return std::static_pointer_cast<void>(token);
+#else
+        // Built-in cancellation token (simple atomic bool)
+        return std::make_shared<std::atomic<bool>>(false);
+#endif
+    }
+
+    void cancel_token(std::shared_ptr<void> token) {
+        if (!token) return;
+
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        auto cancel_token = std::static_pointer_cast<kcenon::thread::cancellation_token>(token);
+        cancel_token->cancel();
+#else
+        auto atomic_token = std::static_pointer_cast<std::atomic<bool>>(token);
+        atomic_token->store(true);
+#endif
+    }
+
+    bool is_token_cancelled(std::shared_ptr<void> token) const {
+        if (!token) return false;
+
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        auto cancel_token = std::static_pointer_cast<kcenon::thread::cancellation_token>(token);
+        return cancel_token->is_cancelled();
+#else
+        auto atomic_token = std::static_pointer_cast<std::atomic<bool>>(token);
+        return atomic_token->load();
+#endif
     }
 
 private:
+#if !EXTERNAL_SYSTEMS_AVAILABLE
     void worker_thread() {
         while (true) {
             std::function<void()> task;
@@ -189,17 +323,24 @@ private:
             }
         }
     }
+#endif
 
     thread_config config_;
     bool initialized_;
-    bool shutdown_;
 
+#if EXTERNAL_SYSTEMS_AVAILABLE
+    // External thread_system integration
+    std::shared_ptr<kcenon::thread::thread_pool> thread_pool_;
+#else
+    // Built-in implementation
+    bool shutdown_;
     std::vector<std::thread> workers_;
     std::queue<std::function<void()>> task_queue_;
     mutable std::mutex queue_mutex_;
     std::condition_variable condition_;
     std::condition_variable completion_cv_;
     std::size_t active_tasks_ = 0;
+#endif
 };
 
 // thread_adapter implementation
@@ -243,6 +384,18 @@ void thread_adapter::wait_for_completion() {
 
 bool thread_adapter::wait_for_completion_timeout(std::chrono::milliseconds timeout) {
     return pimpl_->wait_for_completion_timeout(timeout);
+}
+
+std::shared_ptr<void> thread_adapter::create_cancellation_token() {
+    return pimpl_->create_cancellation_token();
+}
+
+void thread_adapter::cancel_token(std::shared_ptr<void> token) {
+    pimpl_->cancel_token(token);
+}
+
+bool thread_adapter::is_token_cancelled(std::shared_ptr<void> token) const {
+    return pimpl_->is_token_cancelled(token);
 }
 
 } // namespace kcenon::integrated::adapters

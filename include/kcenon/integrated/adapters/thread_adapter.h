@@ -113,7 +113,39 @@ public:
      */
     bool wait_for_completion_timeout(std::chrono::milliseconds timeout);
 
+    /**
+     * @brief Create a new cancellation token
+     * @return Token that can be used to cancel operations
+     */
+    std::shared_ptr<void> create_cancellation_token();
+
+    /**
+     * @brief Cancel operations associated with a token
+     * @param token Token to cancel
+     */
+    void cancel_token(std::shared_ptr<void> token);
+
+    /**
+     * @brief Submit a cancellable task
+     * @tparam F Function type
+     * @tparam Args Argument types
+     * @param token Cancellation token
+     * @param f Function to execute
+     * @param args Arguments to pass
+     * @return Future containing the result
+     */
+    template<typename F, typename... Args>
+    auto submit_cancellable(std::shared_ptr<void> token, F&& f, Args&&... args)
+        -> std::future<std::invoke_result_t<F, Args...>>;
+
 private:
+    /**
+     * @brief Check if a token has been cancelled
+     * @param token Token to check
+     * @return true if cancelled, false otherwise
+     */
+    bool is_token_cancelled(std::shared_ptr<void> token) const;
+
     class impl;
     std::unique_ptr<impl> pimpl_;
 };
@@ -149,6 +181,36 @@ auto thread_adapter::submit_with_priority(int priority, F&& f, Args&&... args)
 
     // TODO: Implement priority submission when thread_system supports it
     execute([task]() { (*task)(); });
+
+    return result;
+}
+
+template<typename F, typename... Args>
+auto thread_adapter::submit_cancellable(std::shared_ptr<void> token, F&& f, Args&&... args)
+    -> std::future<std::invoke_result_t<F, Args...>> {
+    using return_type = std::invoke_result_t<F, Args...>;
+
+    auto promise = std::make_shared<std::promise<return_type>>();
+    auto result = promise->get_future();
+
+    // Wrap task with cancellation check
+    execute([promise, token, func = std::bind(std::forward<F>(f), std::forward<Args>(args)...), this]() {
+        try {
+            // Check if cancelled before executing
+            if (token && is_token_cancelled(token)) {
+                throw std::runtime_error("Task cancelled before execution");
+            }
+
+            if constexpr (std::is_void_v<return_type>) {
+                func();
+                promise->set_value();
+            } else {
+                promise->set_value(func());
+            }
+        } catch (...) {
+            promise->set_exception(std::current_exception());
+        }
+    });
 
     return result;
 }

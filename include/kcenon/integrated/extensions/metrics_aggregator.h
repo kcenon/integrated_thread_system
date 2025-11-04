@@ -51,6 +51,13 @@ struct aggregated_metrics {
     aggregated_metrics& operator=(aggregated_metrics&&) noexcept = default;
 };
 
+// Forward declarations for adapters
+namespace kcenon::integrated::adapters {
+    class thread_adapter;
+    class logger_adapter;
+    class monitoring_adapter;
+}
+
 /**
  * @brief Metrics aggregator collects and combines metrics from all subsystems
  */
@@ -64,6 +71,14 @@ public:
 
     common::VoidResult initialize();
     common::VoidResult shutdown();
+
+    /**
+     * @brief Set adapters for metrics collection
+     * Must be called before collect_metrics()
+     */
+    void set_thread_adapter(adapters::thread_adapter* adapter);
+    void set_logger_adapter(adapters::logger_adapter* adapter);
+    void set_monitoring_adapter(adapters::monitoring_adapter* adapter);
 
     common::Result<aggregated_metrics> collect_metrics();
     std::string export_prometheus_format();

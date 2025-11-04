@@ -158,7 +158,7 @@ Modern C++ applications need more than just thread pools. They need **unified so
 **📊 Observable by Default**
 - Real-time performance metrics
 - Health monitoring
-- Distributed tracing support
+- Comprehensive metrics collection
 - Prometheus/JSON export
 
 </td>
@@ -266,7 +266,7 @@ system.map_reduce(begin, end,
 ✅ Scheduled/recurring tasks
 ✅ Circuit breaker
 ✅ Event system
-✅ Plugin architecture
+⏳ Plugin architecture (under development)
 
 </td>
 </tr>
@@ -580,7 +580,7 @@ cmake --build build -j
 - **[💡 Examples](docs/EXAMPLES.md)** - 16+ real-world examples
 - **[🏗️ Architecture Guide](docs/architecture/)** - System design details
 - **[📊 Performance Tuning](docs/guides/performance.md)** - Optimization guide
-- **[🔄 Migration Guide](CHANGELOG.md#migration-guide)** - Upgrading from older versions
+- **[🔄 Migration Guide](MIGRATION.md)** - Migrating from individual systems
 
 ## 🤝 Contributing
 

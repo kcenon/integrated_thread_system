@@ -162,14 +162,6 @@ Cancels a previously created token, signaling all associated tasks to stop.
 **Parameters:**
 - `token`: Cancellation token created by `create_cancellation_token()`
 
-#### `is_token_cancelled`
-```cpp
-bool is_token_cancelled(std::shared_ptr<void> token);
-```
-Checks if a token has been cancelled.
-
-**Returns:** `true` if token is cancelled, `false` otherwise
-
 #### `submit_cancellable`
 ```cpp
 template<typename F, typename... Args>
@@ -417,23 +409,25 @@ Unsubscribes from events.
 
 ### Plugin System
 
+> **Note:** Plugin system is under development. The API is defined but not yet fully implemented.
+
 #### `load_plugin`
 ```cpp
 void load_plugin(const std::string& plugin_path);
 ```
-Loads a plugin dynamically.
+Loads a plugin dynamically. (Under development)
 
 #### `unload_plugin`
 ```cpp
 void unload_plugin(const std::string& plugin_name);
 ```
-Unloads a plugin.
+Unloads a plugin. (Under development)
 
 #### `list_plugins`
 ```cpp
 std::vector<std::string> list_plugins() const;
 ```
-Lists loaded plugins.
+Lists loaded plugins. (Under development)
 
 ### Export Functions
 

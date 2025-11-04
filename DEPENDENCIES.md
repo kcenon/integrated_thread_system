@@ -6,54 +6,51 @@ This document describes the external dependencies required by integrated_thread_
 
 integrated_thread_system requires the following external systems to be available:
 
-| System | Minimum Version | Purpose | Repository |
-|--------|----------------|---------|------------|
-| **common_system** | v1.0.0 | Result<T> pattern, error codes, interfaces | [kcenon/common_system](https://github.com/kcenon/common_system) |
-| **thread_system** | v2.0.0 | Thread pool, cancellation tokens, job queues | [kcenon/thread_system](https://github.com/kcenon/thread_system) |
-| **logger_system** | v1.0.0 | Asynchronous logging, formatters, writers | [kcenon/logger_system](https://github.com/kcenon/logger_system) |
-| **monitoring_system** | v1.0.0 | Performance profiling, system metrics | [kcenon/monitoring_system](https://github.com/kcenon/monitoring_system) |
+| System | Purpose | Repository |
+|--------|---------|------------|
+| **common_system** | Result<T> pattern, error codes, interfaces | [kcenon/common_system](https://github.com/kcenon/common_system) |
+| **thread_system** | Thread pool, cancellation tokens, job queues | [kcenon/thread_system](https://github.com/kcenon/thread_system) |
+| **logger_system** | Asynchronous logging, formatters, writers | [kcenon/logger_system](https://github.com/kcenon/logger_system) |
+| **monitoring_system** | Performance profiling, system metrics | [kcenon/monitoring_system](https://github.com/kcenon/monitoring_system) |
 
 ## Library Dependencies
 
-| Library | Minimum Version | Purpose | Type |
-|---------|----------------|---------|------|
-| **nlohmann_json** | v3.11.3 | JSON serialization/deserialization | Header-only |
-| **Google Test** | v1.14.0+ | Unit testing framework | Optional (BUILD_TESTS) |
-| **Google Benchmark** | v1.8.0+ | Performance benchmarking | Optional (BUILD_BENCHMARKS) |
+| Library | Purpose | Type |
+|---------|---------|------|
+| **nlohmann_json** | JSON serialization/deserialization | Header-only (private) |
+| **fmt** | Formatting (legacy support) | Optional |
+| **Google Test** | Unit testing framework | Optional (BUILD_TESTS) |
+| **Google Benchmark** | Performance benchmarking | Optional (BUILD_BENCHMARKS) |
+
+### Optional vcpkg Features
+
+The project supports additional features via vcpkg:
+
+| Feature | Dependencies | Purpose |
+|---------|--------------|---------|
+| `testing` | GTest, GMock | Unit testing infrastructure |
+| `benchmarking` | Google Benchmark | Performance benchmarking |
+| `web-dashboard` | RestInIO, WebSocketpp, OpenSSL | Web-based monitoring dashboard |
+| `network-logging` | ASIO | Network-based log sinks |
+| `database-storage` | SQLite3, PostgreSQL | Metrics persistence |
+| `cloud-integration` | AWS SDK | Cloud monitoring integration |
+| `compression` | LZ4, Zstd, Snappy | Log compression |
+
+To enable a feature:
+```bash
+vcpkg install integrated-thread-system[testing,benchmarking]
+```
 
 ## Compiler Requirements
 
-- **C++ Standard**: C++20 (required, no fallback)
-- **Minimum Compiler Versions**:
-  - GCC 10+ (full std::format support in GCC 13+)
-  - Clang 14+ (full std::format support in Clang 15+)
+- **C++ Standard**: C++20 (required for `std::jthread`, concepts, ranges)
+- **Compiler Support**:
+  - GCC 11+ (full C++20 support)
+  - Clang 14+ (full C++20 support)
   - MSVC 19.29+ (Visual Studio 2019 16.10+)
   - Apple Clang 14.0+ (Xcode 14+)
 
-## Version Compatibility Matrix
-
-### integrated_thread_system v2.0.0 (Current)
-
-| System | Compatible Versions | Tested Versions | Notes |
-|--------|-------------------|-----------------|-------|
-| common_system | v1.0.0+ | v1.0.0 | C++20 std::format required |
-| thread_system | v2.0.0+ | v2.0.0 | Cancellation token support required |
-| logger_system | v1.0.0+ | v1.0.0, v3.0.0 | Formatter interface support |
-| monitoring_system | v1.0.0+ | v1.0.0 | IMonitor interface support |
-
-### Breaking Changes by Version
-
-#### v2.0.0 (2024-01-15)
-- **common_system now REQUIRED** (was optional in v1.x)
-- **C++20 now REQUIRED** (was C++17 in v1.x)
-- **fmt library removed** (using std::format instead)
-- External system integration via adapters
-- Result<T> pattern throughout API
-
-#### v1.0.0 (Initial Release)
-- Optional common_system support
-- C++17 minimum
-- fmt library dependency
+> **Note**: Full `std::format` support requires GCC 13+, Clang 15+. Earlier compiler versions may fall back to `fmt` library if available.
 
 ## Installation
 
@@ -65,10 +62,10 @@ Clone all required systems as sibling directories:
 cd ~/Sources  # or your preferred location
 
 # Clone dependencies
-git clone --branch v1.0.0 https://github.com/kcenon/common_system.git
-git clone --branch v2.0.0 https://github.com/kcenon/thread_system.git
-git clone --branch v1.0.0 https://github.com/kcenon/logger_system.git
-git clone --branch v1.0.0 https://github.com/kcenon/monitoring_system.git
+git clone https://github.com/kcenon/common_system.git
+git clone https://github.com/kcenon/thread_system.git
+git clone https://github.com/kcenon/logger_system.git
+git clone https://github.com/kcenon/monitoring_system.git
 
 # Clone integrated_thread_system
 git clone https://github.com/kcenon/integrated_thread_system.git
@@ -116,28 +113,20 @@ CMake searches for dependencies in the following order:
 4. **Custom install prefix**: `${CMAKE_INSTALL_PREFIX}/lib/<system_name>`
 5. **FetchContent**: Automatically fetches from GitHub with pinned version
 
-## Version Verification
-
-The build system automatically verifies dependency versions. If an incompatible version is detected, the build will fail with a clear error message:
-
-```
-CMake Error: common_system version 0.9.0 is too old. Required: 1.0.0 or newer
-```
-
 ## Troubleshooting
 
 ### "common_system not found"
 
 Ensure common_system is available in one of the search paths or let FetchContent handle it automatically.
 
-### "Version mismatch"
+### "Dependency mismatch"
 
-Update the dependency to the required version:
+Update the dependency to the latest compatible version:
 
 ```bash
 cd ~/Sources/common_system
 git fetch --tags
-git checkout v1.0.0
+git pull origin main
 ```
 
 ### "C++20 not supported"

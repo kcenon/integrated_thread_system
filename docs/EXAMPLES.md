@@ -159,18 +159,19 @@ int main() {
 }
 ```
 
-**Advanced: Cooperative Cancellation**
-For tasks that need to check cancellation status during execution:
+**Note:** The current implementation checks cancellation status before task execution. For cooperative cancellation during execution, tasks should use the `cancellation_token` class directly:
 
 ```cpp
 int main() {
     unified_thread_system system;
-    auto token = system.create_cancellation_token();
 
-    auto future = system.submit_cancellable(token, [&system, token]() {
+    // Use the cancellation_token class for cooperative cancellation
+    cancellation_token token;
+
+    auto future = system.submit_cancellable(token, [&token]() {
         for (int i = 0; i < 100; ++i) {
             // Check cancellation status during execution
-            if (system.is_token_cancelled(token)) {
+            if (token.is_cancelled()) {
                 std::cout << "Task cancelled at iteration " << i << std::endl;
                 return -1;  // Return early on cancellation
             }
@@ -183,7 +184,7 @@ int main() {
 
     // Cancel after 50ms
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    system.cancel_token(token);
+    token.cancel();
 
     int result = future.get();
     if (result == -1) {

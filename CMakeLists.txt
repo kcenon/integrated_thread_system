@@ -37,6 +37,21 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 ##################################################
+# Dependency Version Requirements
+##################################################
+
+set(REQUIRED_COMMON_SYSTEM_VERSION "1.0.0")
+set(REQUIRED_THREAD_SYSTEM_VERSION "2.0.0")
+set(REQUIRED_LOGGER_SYSTEM_VERSION "1.0.0")
+set(REQUIRED_MONITORING_SYSTEM_VERSION "1.0.0")
+
+message(STATUS "Dependency version requirements:")
+message(STATUS "  common_system >= ${REQUIRED_COMMON_SYSTEM_VERSION}")
+message(STATUS "  thread_system >= ${REQUIRED_THREAD_SYSTEM_VERSION}")
+message(STATUS "  logger_system >= ${REQUIRED_LOGGER_SYSTEM_VERSION}")
+message(STATUS "  monitoring_system >= ${REQUIRED_MONITORING_SYSTEM_VERSION}")
+
+##################################################
 # Compiler-Specific Options
 ##################################################
 
@@ -111,7 +126,7 @@ if(BUILD_WITH_COMMON_SYSTEM)
             FetchContent_Declare(
                 common_system
                 GIT_REPOSITORY https://github.com/kcenon/common_system.git
-                GIT_TAG        main
+                GIT_TAG        v${REQUIRED_COMMON_SYSTEM_VERSION}
                 GIT_SHALLOW    TRUE
                 GIT_PROGRESS   TRUE
             )

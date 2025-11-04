@@ -67,6 +67,12 @@ public:
 
         // Initialize extensions
         metrics_aggregator_->initialize();
+
+        // Connect adapters to metrics aggregator
+        metrics_aggregator_->set_thread_adapter(coordinator_->get_thread_adapter());
+        metrics_aggregator_->set_logger_adapter(coordinator_->get_logger_adapter());
+        metrics_aggregator_->set_monitoring_adapter(coordinator_->get_monitoring_adapter());
+
         // distributed_tracing and plugin_manager removed (planned for v2.1.0)
     }
 
@@ -86,23 +92,65 @@ public:
             throw std::runtime_error("Thread adapter not available");
         }
 
-        auto result = thread_adapter->execute(std::move(task));
+        // Increment submitted counter before submission
+        metrics_aggregator_->increment_tasks_submitted();
+
+        // Wrap task to track completion
+        auto wrapped_task = [this, task = std::move(task)]() mutable {
+            try {
+                task();
+                // Increment completed counter on success
+                metrics_aggregator_->increment_tasks_completed();
+            } catch (...) {
+                // Still count as completed even if task throws
+                metrics_aggregator_->increment_tasks_completed();
+                throw;
+            }
+        };
+
+        auto result = thread_adapter->execute(std::move(wrapped_task));
         if (result.is_err()) {
+            // Decrement submitted counter if submission fails
+            // TODO: Add decrement method or track failed submissions separately
             throw std::runtime_error("Failed to submit task: " + result.error().message);
         }
     }
 
     void submit_priority_internal(int priority, std::function<void()> task) {
-        submit_internal(std::move(task));
-    }
+        if (shutting_down_) {
+            throw std::runtime_error("System is shutting down");
+        }
 
-    void schedule_internal(std::chrono::milliseconds delay, std::function<void()> task) {
         auto* thread_adapter = coordinator_->get_thread_adapter();
         if (!thread_adapter) {
             throw std::runtime_error("Thread adapter not available");
         }
 
-        thread_adapter->execute([delay, task = std::move(task)]() {
+        // Increment submitted counter before submission
+        metrics_aggregator_->increment_tasks_submitted();
+
+        // Wrap task to track completion
+        auto wrapped_task = [this, task = std::move(task)]() mutable {
+            try {
+                task();
+                metrics_aggregator_->increment_tasks_completed();
+            } catch (...) {
+                metrics_aggregator_->increment_tasks_completed();
+                throw;
+            }
+        };
+
+        // Use thread_adapter's priority submission
+        // Note: Currently thread_adapter::submit_with_priority falls back to regular execute
+        // This will be activated when thread_system adds priority queue support
+        auto future = thread_adapter->submit_with_priority(priority, std::move(wrapped_task));
+        // Let the future go out of scope - we don't need to wait for it
+        (void)future;
+    }
+
+    void schedule_internal(std::chrono::milliseconds delay, std::function<void()> task) {
+        // Scheduled tasks go through submit_internal to maintain consistent metrics
+        submit_internal([delay, task = std::move(task)]() mutable {
             std::this_thread::sleep_for(delay);
             task();
         });
@@ -176,10 +224,20 @@ public:
     bool is_shutting_down() const { return shutting_down_; }
 
     std::string export_metrics_json() const {
+        // Collect latest metrics before exporting
+        auto result = metrics_aggregator_->collect_metrics();
+        if (result.is_err()) {
+            return "{\"error\": \"Failed to collect metrics: " + result.error().message + "\"}";
+        }
         return metrics_aggregator_->export_json_format();
     }
 
     std::string export_metrics_prometheus() const {
+        // Collect latest metrics before exporting
+        auto result = metrics_aggregator_->collect_metrics();
+        if (result.is_err()) {
+            return "# Error: Failed to collect metrics: " + result.error().message + "\n";
+        }
         return metrics_aggregator_->export_prometheus_format();
     }
 
@@ -230,10 +288,27 @@ public:
             throw std::runtime_error("Thread adapter not available");
         }
 
+        // Increment submitted counter
+        metrics_aggregator_->increment_tasks_submitted();
+
+        // Note: We can't wrap the task for metrics tracking here because
+        // submit_cancellable uses std::bind internally which causes const issues
+        // with mutable lambdas. For now, cancellable tasks won't track completion.
+        // TODO: Refactor thread_adapter::submit_cancellable to avoid std::bind
+
         // Submit via thread_adapter's cancel-aware submission
         auto future = thread_adapter->submit_cancellable(token, std::move(task));
-        // Let the future go out of scope - we don't need to wait for it
-        (void)future;
+        // Manually track completion here (not ideal but works)
+        auto tracking_future = thread_adapter->submit([this, f = std::move(future)]() mutable {
+            try {
+                f.get();  // Wait for cancellable task
+                metrics_aggregator_->increment_tasks_completed();
+            } catch (...) {
+                metrics_aggregator_->increment_tasks_completed();
+                throw;
+            }
+        });
+        (void)tracking_future;
     }
 
 private:

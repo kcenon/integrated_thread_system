@@ -84,6 +84,13 @@ public:
     std::string export_prometheus_format();
     std::string export_json_format();
 
+    /**
+     * @brief Increment task counters (thread-safe)
+     * Called from thread_adapter when tasks are submitted/completed
+     */
+    void increment_tasks_submitted();
+    void increment_tasks_completed();
+
 private:
     class impl;
     std::unique_ptr<impl> pimpl_;

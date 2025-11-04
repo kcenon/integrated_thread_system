@@ -248,4 +248,12 @@ std::string metrics_aggregator::export_json_format() {
     return pimpl_->export_json_format();
 }
 
+void metrics_aggregator::increment_tasks_submitted() {
+    pimpl_->increment_tasks_submitted();
+}
+
+void metrics_aggregator::increment_tasks_completed() {
+    pimpl_->increment_tasks_completed();
+}
+
 } // namespace kcenon::integrated::extensions

@@ -577,9 +577,10 @@ if(BUILD_TESTS)
     endif()
 endif()
 
-# Add benchmarks
+# Add benchmarks (handled in tests/CMakeLists.txt)
 if(BUILD_BENCHMARKS)
     message(STATUS "Building benchmarks...")
+    set(INTEGRATED_BUILD_BENCHMARKS ON CACHE BOOL "Build benchmarks" FORCE)
 
     # Find benchmark dependencies
     if(USE_SYSTEM_DEPENDENCIES)
@@ -589,10 +590,10 @@ if(BUILD_BENCHMARKS)
     endif()
 
     if(benchmark_FOUND)
-        message(STATUS "benchmark found, adding benchmarks")
-        add_subdirectory(benchmarks)
+        message(STATUS "benchmark found, will be built via tests/benchmarks")
     else()
         message(WARNING "benchmark not found, skipping benchmarks")
+        set(INTEGRATED_BUILD_BENCHMARKS OFF CACHE BOOL "Build benchmarks" FORCE)
     endif()
 endif()
 

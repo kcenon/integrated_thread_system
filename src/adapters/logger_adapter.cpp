@@ -5,10 +5,13 @@
 #include <kcenon/integrated/adapters/logger_adapter.h>
 
 #if EXTERNAL_SYSTEMS_AVAILABLE
-// Use external logger_system's logger
+// Use external logger_system's logger with builder API
 #include <kcenon/logger/core/logger.h>
+#include <kcenon/logger/core/logger_builder.h>
 #include <kcenon/logger/writers/console_writer.h>
 #include <kcenon/logger/writers/file_writer.h>
+#include <kcenon/logger/formatters/timestamp_formatter.h>
+#include <kcenon/logger/formatters/json_formatter.h>
 #else
 // Fallback to built-in implementation
 #include <iostream>
@@ -39,39 +42,63 @@ public:
 
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
-            // Create logger_system's logger with async support
-            logger_ = std::make_unique<kcenon::logger::logger>(
-                true,  // async mode for better performance
-                8192   // buffer size
-            );
+            // Use logger_builder for modern API (logger_system v3.0.0+)
+            auto builder = kcenon::logger::logger_builder()
+                .with_async_mode(config_.async_mode)
+                .with_buffer_size(config_.buffer_size);
 
             // Add console writer if enabled
             if (config_.enable_console_logging) {
-                auto console_writer = std::make_unique<kcenon::logger::console_writer>();
-                auto add_result = logger_->add_writer(std::move(console_writer));
-                if (!add_result) {
-                    return common::VoidResult::err(
-                        common::error_codes::INTERNAL_ERROR,
-                        "Failed to add console writer"
-                    );
-                }
+                builder.with_console_writer();
             }
 
             // Add file writer if enabled
             if (config_.enable_file_logging) {
                 std::string log_file = config_.log_directory + "/integrated_thread_system.log";
-                auto file_writer = std::make_unique<kcenon::logger::file_writer>(log_file);
-                auto add_result = logger_->add_writer(std::move(file_writer));
-                if (!add_result) {
-                    return common::VoidResult::err(
-                        common::error_codes::INTERNAL_ERROR,
-                        "Failed to add file writer"
-                    );
+                builder.with_file_writer(log_file);
+            }
+
+            // Configure formatter based on format option
+            switch (config_.format) {
+                case log_format::json: {
+                    // JSON formatter for log aggregation systems
+                    kcenon::logger::format_options opts;
+                    opts.include_timestamp = true;
+                    opts.include_thread_id = config_.include_thread_id;
+                    opts.include_source_location = config_.include_source_location;
+                    opts.pretty_print = config_.pretty_print_json;
+                    builder.with_formatter<kcenon::logger::json_formatter>(opts);
+                    break;
+                }
+                case log_format::timestamp:
+                default: {
+                    // Default timestamp formatter
+                    kcenon::logger::format_options opts;
+                    opts.include_timestamp = true;
+                    opts.include_thread_id = config_.include_thread_id;
+                    opts.include_source_location = config_.include_source_location;
+                    opts.enable_colors = config_.enable_colors;
+                    builder.with_formatter<kcenon::logger::timestamp_formatter>(opts);
+                    break;
                 }
             }
 
-            // Convert log_level from integrated config to logger_system's log_level
-            logger_->set_min_level(convert_log_level(config_.min_log_level));
+            // Set minimum log level
+            builder.set_min_level(convert_log_level(config_.min_log_level));
+
+            // Use standalone backend
+            builder.with_standalone_backend();
+
+            // Build the logger
+            auto logger_result = builder.build();
+            if (!logger_result) {
+                return common::VoidResult::err(
+                    common::error_codes::INTERNAL_ERROR,
+                    std::string("Failed to build logger: ") + logger_result.error().message
+                );
+            }
+
+            logger_ = std::move(logger_result.value());
 
             // Start the logger
             auto start_result = logger_->start();

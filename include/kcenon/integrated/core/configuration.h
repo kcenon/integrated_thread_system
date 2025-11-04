@@ -56,6 +56,15 @@ struct thread_config {
 };
 
 /**
+ * @brief Log format enumeration
+ */
+enum class log_format {
+    timestamp,  // Human-readable timestamp format (default)
+    json,       // JSON structured format for log aggregation systems
+    custom      // User-defined custom formatter
+};
+
+/**
  * @brief Logger configuration
  */
 struct logger_config {
@@ -66,6 +75,13 @@ struct logger_config {
     std::string log_directory = "./logs";
     log_level min_log_level = log_level::info;
     bool enable_metrics = true;
+
+    // Formatter options (logger_system v3.0.0+)
+    log_format format = log_format::timestamp;
+    bool pretty_print_json = false;  // For JSON format only
+    bool include_thread_id = true;
+    bool include_source_location = true;
+    bool enable_colors = true;  // ANSI color codes for timestamp format
 };
 
 /**

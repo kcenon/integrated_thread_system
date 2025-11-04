@@ -12,7 +12,7 @@
       "version>=": "3.11.3"
     }
   ],
-  "builtin-baseline": "2024.01.12",
+  "builtin-baseline": "b27f6bfad367d64f8f0f3296351c5d246e182bb4",
   "features": {
     "testing": {
       "description": "Build with testing support",

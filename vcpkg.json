@@ -1,15 +1,18 @@
 {
   "$schema": "https://raw.githubusercontent.com/Microsoft/vcpkg/master/scripts/vcpkg.schema.json",
   "name": "integrated-thread-system",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Enterprise-grade unified threading framework with logging and monitoring",
   "homepage": "https://github.com/kcenon/integrated_thread_system",
   "documentation": "https://github.com/kcenon/integrated_thread_system/tree/main/docs",
   "supports": "!(uwp | xbox)",
   "dependencies": [
-    "fmt",
-    "nlohmann-json"
+    {
+      "name": "nlohmann-json",
+      "version>=": "3.11.3"
+    }
   ],
+  "builtin-baseline": "b27f6bfad367d64f8f0f3296351c5d246e182bb4",
   "features": {
     "testing": {
       "description": "Build with testing support",

@@ -37,6 +37,21 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 ##################################################
+# Dependency Version Requirements
+##################################################
+
+set(REQUIRED_COMMON_SYSTEM_VERSION "1.0.0")
+set(REQUIRED_THREAD_SYSTEM_VERSION "2.0.0")
+set(REQUIRED_LOGGER_SYSTEM_VERSION "1.0.0")
+set(REQUIRED_MONITORING_SYSTEM_VERSION "1.0.0")
+
+message(STATUS "Dependency version requirements:")
+message(STATUS "  common_system >= ${REQUIRED_COMMON_SYSTEM_VERSION}")
+message(STATUS "  thread_system >= ${REQUIRED_THREAD_SYSTEM_VERSION}")
+message(STATUS "  logger_system >= ${REQUIRED_LOGGER_SYSTEM_VERSION}")
+message(STATUS "  monitoring_system >= ${REQUIRED_MONITORING_SYSTEM_VERSION}")
+
+##################################################
 # Compiler-Specific Options
 ##################################################
 
@@ -88,9 +103,10 @@ if(BUILD_WITH_COMMON_SYSTEM)
     if(NOT common_system_FOUND)
         # Check for common_system with prioritized search paths
         set(_INTEGRATED_COMMON_PATHS
-            "/Users/dongcheolshin/Sources/common_system/include"      # macOS development (HIGHEST PRIORITY)
-            "/home/${USER}/Sources/common_system/include"              # Linux development
-            "${CMAKE_CURRENT_SOURCE_DIR}/../common_system/include"     # Sibling directory (fallback for CI)
+            "$ENV{HOME}/Sources/common_system/include"                 # User home directory (cross-platform)
+            "${CMAKE_CURRENT_SOURCE_DIR}/../common_system/include"     # Sibling directory (HIGHEST PRIORITY for CI)
+            "/usr/local/include/common_system"                         # System installation path
+            "${CMAKE_INSTALL_PREFIX}/include/common_system"            # Custom install prefix
             "${CMAKE_CURRENT_SOURCE_DIR}/common_system/include"        # Embedded subfolder (legacy fallback)
         )
 
@@ -110,7 +126,7 @@ if(BUILD_WITH_COMMON_SYSTEM)
             FetchContent_Declare(
                 common_system
                 GIT_REPOSITORY https://github.com/kcenon/common_system.git
-                GIT_TAG        main
+                GIT_TAG        v${REQUIRED_COMMON_SYSTEM_VERSION}
                 GIT_SHALLOW    TRUE
                 GIT_PROGRESS   TRUE
             )
@@ -147,9 +163,10 @@ if(BUILD_INTEGRATED_AS_SUBMODULE)
 else()
     # Find thread_system with prioritized search paths
     set(_THREAD_SEARCH_PATHS
-        "/Users/dongcheolshin/Sources/thread_system"           # macOS development (HIGHEST PRIORITY)
-        "/home/${USER}/Sources/thread_system"                  # Linux development
-        "${CMAKE_CURRENT_SOURCE_DIR}/../thread_system"         # Sibling directory (fallback for CI)
+        "$ENV{HOME}/Sources/thread_system"                     # User home directory (cross-platform)
+        "${CMAKE_CURRENT_SOURCE_DIR}/../thread_system"         # Sibling directory (HIGHEST PRIORITY for CI)
+        "/usr/local/lib/thread_system"                         # System installation path
+        "${CMAKE_INSTALL_PREFIX}/lib/thread_system"            # Custom install prefix
     )
 
     set(THREAD_SYSTEM_DIR "")
@@ -170,9 +187,10 @@ else()
     # Find logger_system with prioritized search paths
     if(EXTERNAL_SYSTEMS_AVAILABLE)
         set(_LOGGER_SEARCH_PATHS
-            "/Users/dongcheolshin/Sources/logger_system"       # macOS development (HIGHEST PRIORITY)
-            "/home/${USER}/Sources/logger_system"              # Linux development
-            "${CMAKE_CURRENT_SOURCE_DIR}/../logger_system"     # Sibling directory (fallback for CI)
+            "$ENV{HOME}/Sources/logger_system"                 # User home directory (cross-platform)
+            "${CMAKE_CURRENT_SOURCE_DIR}/../logger_system"     # Sibling directory (HIGHEST PRIORITY for CI)
+            "/usr/local/lib/logger_system"                     # System installation path
+            "${CMAKE_INSTALL_PREFIX}/lib/logger_system"        # Custom install prefix
         )
 
         set(LOGGER_SYSTEM_DIR "")
@@ -193,9 +211,10 @@ else()
     # Find monitoring_system with prioritized search paths
     if(EXTERNAL_SYSTEMS_AVAILABLE)
         set(_MONITORING_SEARCH_PATHS
-            "/Users/dongcheolshin/Sources/monitoring_system"   # macOS development (HIGHEST PRIORITY)
-            "/home/${USER}/Sources/monitoring_system"          # Linux development
-            "${CMAKE_CURRENT_SOURCE_DIR}/../monitoring_system" # Sibling directory (fallback for CI)
+            "$ENV{HOME}/Sources/monitoring_system"             # User home directory (cross-platform)
+            "${CMAKE_CURRENT_SOURCE_DIR}/../monitoring_system" # Sibling directory (HIGHEST PRIORITY for CI)
+            "/usr/local/lib/monitoring_system"                 # System installation path
+            "${CMAKE_INSTALL_PREFIX}/lib/monitoring_system"    # Custom install prefix
         )
 
         set(MONITORING_SYSTEM_DIR "")
@@ -283,9 +302,8 @@ set(INTEGRATED_ADAPTER_SOURCES
 )
 
 set(INTEGRATED_EXTENSION_SOURCES
-    src/extensions/distributed_tracing.cpp
     src/extensions/metrics_aggregator.cpp
-    src/extensions/plugin_manager.cpp
+    # plugin_manager and distributed_tracing removed (planned for v2.1.0)
 )
 
 ##################################################

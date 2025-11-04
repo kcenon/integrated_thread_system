@@ -302,9 +302,8 @@ set(INTEGRATED_ADAPTER_SOURCES
 )
 
 set(INTEGRATED_EXTENSION_SOURCES
-    src/extensions/distributed_tracing.cpp
     src/extensions/metrics_aggregator.cpp
-    src/extensions/plugin_manager.cpp
+    # plugin_manager and distributed_tracing removed (planned for v2.1.0)
 )
 
 ##################################################

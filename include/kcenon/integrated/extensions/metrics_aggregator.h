@@ -15,6 +15,13 @@
 #include <unordered_map>
 #include <kcenon/common/patterns/result.h>
 
+// Forward declarations
+namespace kcenon::integrated::adapters {
+    class thread_adapter;
+    class logger_adapter;
+    class monitoring_adapter;
+}
+
 namespace kcenon::integrated::extensions {
 
 /**
@@ -51,13 +58,6 @@ struct aggregated_metrics {
     aggregated_metrics& operator=(aggregated_metrics&&) noexcept = default;
 };
 
-// Forward declarations for adapters
-namespace kcenon::integrated::adapters {
-    class thread_adapter;
-    class logger_adapter;
-    class monitoring_adapter;
-}
-
 /**
  * @brief Metrics aggregator collects and combines metrics from all subsystems
  */
@@ -76,9 +76,9 @@ public:
      * @brief Set adapters for metrics collection
      * Must be called before collect_metrics()
      */
-    void set_thread_adapter(adapters::thread_adapter* adapter);
-    void set_logger_adapter(adapters::logger_adapter* adapter);
-    void set_monitoring_adapter(adapters::monitoring_adapter* adapter);
+    void set_thread_adapter(kcenon::integrated::adapters::thread_adapter* adapter);
+    void set_logger_adapter(kcenon::integrated::adapters::logger_adapter* adapter);
+    void set_monitoring_adapter(kcenon::integrated::adapters::monitoring_adapter* adapter);
 
     common::Result<aggregated_metrics> collect_metrics();
     std::string export_prometheus_format();

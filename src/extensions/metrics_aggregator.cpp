@@ -70,7 +70,7 @@ public:
         // Collect monitoring system metrics (CPU, memory)
         if (monitoring_adapter_ && monitoring_adapter_->is_initialized()) {
             auto mon_metrics_result = monitoring_adapter_->get_metrics();
-            if (mon_metrics_result) {
+            if (mon_metrics_result.is_ok()) {
                 const auto& mon_metrics = mon_metrics_result.value();
 
                 // Extract system metrics from monitoring adapter
@@ -224,15 +224,15 @@ common::VoidResult metrics_aggregator::shutdown() {
     return pimpl_->shutdown();
 }
 
-void metrics_aggregator::set_thread_adapter(adapters::thread_adapter* adapter) {
+void metrics_aggregator::set_thread_adapter(kcenon::integrated::adapters::thread_adapter* adapter) {
     pimpl_->set_thread_adapter(adapter);
 }
 
-void metrics_aggregator::set_logger_adapter(adapters::logger_adapter* adapter) {
+void metrics_aggregator::set_logger_adapter(kcenon::integrated::adapters::logger_adapter* adapter) {
     pimpl_->set_logger_adapter(adapter);
 }
 
-void metrics_aggregator::set_monitoring_adapter(adapters::monitoring_adapter* adapter) {
+void metrics_aggregator::set_monitoring_adapter(kcenon::integrated::adapters::monitoring_adapter* adapter) {
     pimpl_->set_monitoring_adapter(adapter);
 }
 

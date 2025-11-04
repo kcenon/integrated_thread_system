@@ -293,12 +293,10 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## 📈 Roadmap
 
-### Version 1.1 (Q2 2025)
+### Future Enhancements
 - [ ] GPU task offloading support
 - [ ] Distributed system support
 - [ ] Advanced scheduling policies
-
-### Version 1.2 (Q3 2025)
 - [ ] Machine learning workload optimization
 - [ ] Cloud-native integrations
 - [ ] Real-time system support

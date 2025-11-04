@@ -379,7 +379,7 @@ Cores  Throughput   Speedup   Efficiency
 16     1,180K/s     8.14x     51% (HT)
 ```
 
-> **Note on Performance Metrics (as of v2.0.1)**
+> **Note on Performance Metrics**
 > Recent fixes to the metrics instrumentation system now enable accurate real-time tracking:
 > - ✅ Task counters (`tasks_submitted`, `tasks_completed`) now update correctly
 > - ✅ Metrics export shows current timestamp and live values (not 1970-01-01)
@@ -745,7 +745,7 @@ if (!task_result) {
 
 ### Architecture Improvement Phases
 
-**Phase Status Overview** (as of 2025-10-23):
+**Phase Status Overview**:
 
 | Phase | Status | Completion | Key Achievements |
 |-------|--------|------------|------------------|

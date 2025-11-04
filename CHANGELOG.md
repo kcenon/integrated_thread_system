@@ -2,8 +2,8 @@
 
 All notable changes to the Integrated Thread System will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
@@ -77,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance optimization guidelines
 - Best practices and patterns documentation
 
-## [1.0.0] - 2024-01-15
+## [1.0.0]
 
 ### Added
 - Initial release of Integrated Thread System
@@ -117,7 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - nlohmann_json for JSON support
 - Google Test for unit testing (optional)
 
-## [0.9.0] - 2024-01-01 (Pre-release)
+## [0.9.0] (Pre-release)
 
 ### Added
 - Integration of thread_system, logger_system, and monitoring_system

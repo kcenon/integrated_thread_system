@@ -88,9 +88,10 @@ if(BUILD_WITH_COMMON_SYSTEM)
     if(NOT common_system_FOUND)
         # Check for common_system with prioritized search paths
         set(_INTEGRATED_COMMON_PATHS
-            "/Users/dongcheolshin/Sources/common_system/include"      # macOS development (HIGHEST PRIORITY)
-            "/home/${USER}/Sources/common_system/include"              # Linux development
-            "${CMAKE_CURRENT_SOURCE_DIR}/../common_system/include"     # Sibling directory (fallback for CI)
+            "$ENV{HOME}/Sources/common_system/include"                 # User home directory (cross-platform)
+            "${CMAKE_CURRENT_SOURCE_DIR}/../common_system/include"     # Sibling directory (HIGHEST PRIORITY for CI)
+            "/usr/local/include/common_system"                         # System installation path
+            "${CMAKE_INSTALL_PREFIX}/include/common_system"            # Custom install prefix
             "${CMAKE_CURRENT_SOURCE_DIR}/common_system/include"        # Embedded subfolder (legacy fallback)
         )
 
@@ -147,9 +148,10 @@ if(BUILD_INTEGRATED_AS_SUBMODULE)
 else()
     # Find thread_system with prioritized search paths
     set(_THREAD_SEARCH_PATHS
-        "/Users/dongcheolshin/Sources/thread_system"           # macOS development (HIGHEST PRIORITY)
-        "/home/${USER}/Sources/thread_system"                  # Linux development
-        "${CMAKE_CURRENT_SOURCE_DIR}/../thread_system"         # Sibling directory (fallback for CI)
+        "$ENV{HOME}/Sources/thread_system"                     # User home directory (cross-platform)
+        "${CMAKE_CURRENT_SOURCE_DIR}/../thread_system"         # Sibling directory (HIGHEST PRIORITY for CI)
+        "/usr/local/lib/thread_system"                         # System installation path
+        "${CMAKE_INSTALL_PREFIX}/lib/thread_system"            # Custom install prefix
     )
 
     set(THREAD_SYSTEM_DIR "")
@@ -170,9 +172,10 @@ else()
     # Find logger_system with prioritized search paths
     if(EXTERNAL_SYSTEMS_AVAILABLE)
         set(_LOGGER_SEARCH_PATHS
-            "/Users/dongcheolshin/Sources/logger_system"       # macOS development (HIGHEST PRIORITY)
-            "/home/${USER}/Sources/logger_system"              # Linux development
-            "${CMAKE_CURRENT_SOURCE_DIR}/../logger_system"     # Sibling directory (fallback for CI)
+            "$ENV{HOME}/Sources/logger_system"                 # User home directory (cross-platform)
+            "${CMAKE_CURRENT_SOURCE_DIR}/../logger_system"     # Sibling directory (HIGHEST PRIORITY for CI)
+            "/usr/local/lib/logger_system"                     # System installation path
+            "${CMAKE_INSTALL_PREFIX}/lib/logger_system"        # Custom install prefix
         )
 
         set(LOGGER_SYSTEM_DIR "")
@@ -193,9 +196,10 @@ else()
     # Find monitoring_system with prioritized search paths
     if(EXTERNAL_SYSTEMS_AVAILABLE)
         set(_MONITORING_SEARCH_PATHS
-            "/Users/dongcheolshin/Sources/monitoring_system"   # macOS development (HIGHEST PRIORITY)
-            "/home/${USER}/Sources/monitoring_system"          # Linux development
-            "${CMAKE_CURRENT_SOURCE_DIR}/../monitoring_system" # Sibling directory (fallback for CI)
+            "$ENV{HOME}/Sources/monitoring_system"             # User home directory (cross-platform)
+            "${CMAKE_CURRENT_SOURCE_DIR}/../monitoring_system" # Sibling directory (HIGHEST PRIORITY for CI)
+            "/usr/local/lib/monitoring_system"                 # System installation path
+            "${CMAKE_INSTALL_PREFIX}/lib/monitoring_system"    # Custom install prefix
         )
 
         set(MONITORING_SYSTEM_DIR "")

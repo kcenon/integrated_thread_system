@@ -9,8 +9,7 @@
 #include <kcenon/integrated/adapters/logger_adapter.h>
 #include <kcenon/integrated/adapters/monitoring_adapter.h>
 #include <kcenon/integrated/extensions/metrics_aggregator.h>
-#include <kcenon/integrated/extensions/distributed_tracing.h>
-#include <kcenon/integrated/extensions/plugin_manager.h>
+// distributed_tracing and plugin_manager removed (planned for v2.1.0)
 
 #include <mutex>
 #include <unordered_map>
@@ -57,8 +56,7 @@ public:
 
         // Initialize extensions
         metrics_aggregator_ = std::make_unique<extensions::metrics_aggregator>();
-        distributed_tracing_ = std::make_unique<extensions::distributed_tracing>();
-        plugin_manager_ = std::make_unique<extensions::plugin_manager>();
+        // distributed_tracing and plugin_manager removed (planned for v2.1.0)
 
         // Initialize all systems
         auto init_result = coordinator_->initialize();
@@ -69,8 +67,7 @@ public:
 
         // Initialize extensions
         metrics_aggregator_->initialize();
-        distributed_tracing_->initialize();
-        plugin_manager_->initialize();
+        // distributed_tracing and plugin_manager removed (planned for v2.1.0)
     }
 
     ~impl() {
@@ -170,8 +167,7 @@ public:
     void shutdown_impl() {
         if (shutting_down_) return;
         shutting_down_ = true;
-        plugin_manager_->shutdown();
-        distributed_tracing_->shutdown();
+        // plugin_manager and distributed_tracing removed (planned for v2.1.0)
         metrics_aggregator_->shutdown();
         coordinator_->shutdown();
     }
@@ -193,16 +189,19 @@ public:
     void reset_circuit_breaker() {}
     bool is_circuit_open() const { return false; }
 
-    void load_plugin(const std::string& plugin_path) {
-        plugin_manager_->load_plugin(plugin_path);
+    void load_plugin(const std::string& /* plugin_path */) {
+        // plugin_manager removed (planned for v2.1.0)
+        throw std::runtime_error("Plugin system not available in this version");
     }
 
-    void unload_plugin(const std::string& plugin_name) {
-        plugin_manager_->unload_plugin(plugin_name);
+    void unload_plugin(const std::string& /* plugin_name */) {
+        // plugin_manager removed (planned for v2.1.0)
+        throw std::runtime_error("Plugin system not available in this version");
     }
 
     std::vector<std::string> list_plugins() const {
-        return plugin_manager_->list_plugins();
+        // plugin_manager removed (planned for v2.1.0)
+        return {};
     }
 
     std::shared_ptr<void> create_cancellation_token() {
@@ -243,8 +242,7 @@ private:
 
     std::unique_ptr<system_coordinator> coordinator_;
     std::unique_ptr<extensions::metrics_aggregator> metrics_aggregator_;
-    std::unique_ptr<extensions::distributed_tracing> distributed_tracing_;
-    std::unique_ptr<extensions::plugin_manager> plugin_manager_;
+    // distributed_tracing and plugin_manager removed (planned for v2.1.0)
 };
 
 // unified_thread_system implementation

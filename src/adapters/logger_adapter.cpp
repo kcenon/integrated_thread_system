@@ -43,20 +43,9 @@ public:
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
             // Use logger_builder for modern API (logger_system v3.0.0+)
-            auto builder = kcenon::logger::logger_builder()
-                .with_async_mode(config_.async_mode)
-                .with_buffer_size(config_.buffer_size);
-
-            // Add console writer if enabled
-            if (config_.enable_console_logging) {
-                builder.with_console_writer();
-            }
-
-            // Add file writer if enabled
-            if (config_.enable_file_logging) {
-                std::string log_file = config_.log_directory + "/integrated_thread_system.log";
-                builder.with_file_writer(log_file);
-            }
+            kcenon::logger::logger_builder builder;
+            builder.with_async(config_.async_mode)
+                   .with_buffer_size(config_.buffer_size);
 
             // Configure formatter based on format option
             switch (config_.format) {
@@ -67,7 +56,7 @@ public:
                     opts.include_thread_id = config_.include_thread_id;
                     opts.include_source_location = config_.include_source_location;
                     opts.pretty_print = config_.pretty_print_json;
-                    builder.with_formatter<kcenon::logger::json_formatter>(opts);
+                    builder.with_formatter(std::make_unique<kcenon::logger::json_formatter>(opts));
                     break;
                 }
                 case log_format::timestamp:
@@ -77,14 +66,25 @@ public:
                     opts.include_timestamp = true;
                     opts.include_thread_id = config_.include_thread_id;
                     opts.include_source_location = config_.include_source_location;
-                    opts.enable_colors = config_.enable_colors;
-                    builder.with_formatter<kcenon::logger::timestamp_formatter>(opts);
+                    // Note: enable_colors is not supported in current logger_system
+                    builder.with_formatter(std::make_unique<kcenon::logger::timestamp_formatter>(opts));
                     break;
                 }
             }
 
+            // Add console writer if enabled
+            if (config_.enable_console_logging) {
+                builder.add_writer("console", std::make_unique<kcenon::logger::console_writer>());
+            }
+
+            // Add file writer if enabled
+            if (config_.enable_file_logging) {
+                std::string log_file = config_.log_directory + "/integrated_thread_system.log";
+                builder.add_writer("file", std::make_unique<kcenon::logger::file_writer>(log_file));
+            }
+
             // Set minimum log level
-            builder.set_min_level(convert_log_level(config_.min_log_level));
+            builder.with_min_level(convert_log_level(config_.min_log_level));
 
             // Use standalone backend
             builder.with_standalone_backend();
@@ -94,7 +94,7 @@ public:
             if (!logger_result) {
                 return common::VoidResult::err(
                     common::error_codes::INTERNAL_ERROR,
-                    std::string("Failed to build logger: ") + logger_result.error().message
+                    std::string("Failed to build logger: ") + logger_result.error_message()
                 );
             }
 

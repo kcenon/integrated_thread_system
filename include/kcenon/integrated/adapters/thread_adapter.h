@@ -113,6 +113,73 @@ public:
      */
     bool wait_for_completion_timeout(std::chrono::milliseconds timeout);
 
+    // Scheduler Interface Support (thread_system v1.0.0+)
+
+    /**
+     * @brief Schedule a task to run after a delay
+     * @param task Task to execute
+     * @param delay Delay before execution
+     * @return Result with task ID for cancellation, or error
+     */
+    common::Result<std::size_t> schedule_task(std::function<void()> task,
+                                               std::chrono::milliseconds delay);
+
+    /**
+     * @brief Schedule a recurring task
+     * @param task Task to execute repeatedly
+     * @param initial_delay Initial delay before first execution
+     * @param interval Interval between executions
+     * @return Result with task ID for cancellation, or error
+     */
+    common::Result<std::size_t> schedule_recurring_task(std::function<void()> task,
+                                                         std::chrono::milliseconds initial_delay,
+                                                         std::chrono::milliseconds interval);
+
+    /**
+     * @brief Cancel a scheduled task by ID
+     * @param task_id Task ID returned from schedule_task
+     * @return Result indicating success or error
+     */
+    common::VoidResult cancel_scheduled_task(std::size_t task_id);
+
+    // Service Registry Support (thread_system v1.0.0+)
+
+    /**
+     * @brief Register a service in the service registry
+     * @tparam Interface Service interface type
+     * @tparam Implementation Service implementation type
+     * @param name Service name for lookup
+     * @param service Service instance
+     * @return Result indicating success or error
+     */
+    template<typename Interface, typename Implementation>
+    common::VoidResult register_service(const std::string& name,
+                                        std::shared_ptr<Implementation> service);
+
+    /**
+     * @brief Resolve a service from the registry
+     * @tparam Interface Service interface type
+     * @param name Service name
+     * @return Result with service instance or error
+     */
+    template<typename Interface>
+    common::Result<std::shared_ptr<Interface>> resolve_service(const std::string& name);
+
+    /**
+     * @brief Check if scheduler is enabled
+     */
+    bool is_scheduler_enabled() const;
+
+    /**
+     * @brief Check if service registry is enabled
+     */
+    bool is_service_registry_enabled() const;
+
+    /**
+     * @brief Check if crash handler is enabled
+     */
+    bool is_crash_handler_enabled() const;
+
     /**
      * @brief Create a new cancellation token
      * @return Token that can be used to cancel operations
@@ -213,6 +280,29 @@ auto thread_adapter::submit_cancellable(std::shared_ptr<void> token, F&& f, Args
     });
 
     return result;
+}
+
+// Service Registry template implementations
+
+template<typename Interface, typename Implementation>
+common::VoidResult thread_adapter::register_service(const std::string& name,
+                                                     std::shared_ptr<Implementation> service) {
+    // Forward to impl
+    // Note: Implementation in cpp file will handle the actual registry interaction
+    return common::VoidResult::err(
+        common::error_codes::INTERNAL_ERROR,
+        "Service registry support not yet implemented"
+    );
+}
+
+template<typename Interface>
+common::Result<std::shared_ptr<Interface>> thread_adapter::resolve_service(const std::string& name) {
+    // Forward to impl
+    // Note: Implementation in cpp file will handle the actual registry interaction
+    return common::Result<std::shared_ptr<Interface>>::err(
+        common::error_codes::INTERNAL_ERROR,
+        "Service registry support not yet implemented"
+    );
 }
 
 } // namespace kcenon::integrated::adapters

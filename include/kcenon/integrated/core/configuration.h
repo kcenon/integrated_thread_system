@@ -53,6 +53,14 @@ struct thread_config {
     std::size_t min_threads = 1;
     std::size_t max_threads = 0;  // 0 = no limit
     bool enable_priority_scheduling = false;  // Enable for typed_thread_pool
+
+    // Scheduler options (thread_system v1.0.0+)
+    bool enable_scheduler = false;  // Enable scheduler interface support
+    bool enable_crash_handler = true;  // Enable crash handler (signal-safe recovery)
+    bool enable_service_registry = true;  // Enable service registry and dependency injection
+    bool enable_hazard_pointer = false;  // Enable hazard pointer for lock-free queue (experimental)
+    bool enable_bounded_queue = false;  // Use bounded queue instead of unbounded
+    std::size_t bounded_queue_capacity = 10000;  // Capacity for bounded queue
 };
 
 /**
@@ -96,6 +104,31 @@ struct monitoring_config {
     double cpu_threshold = 80.0;
     double memory_threshold = 90.0;
     std::size_t max_samples_per_metric = 10000;  // Maximum samples to store per metric
+
+    // Adaptive monitoring options (monitoring_system v2.0.0+)
+    bool enable_adaptive_monitoring = true;  // Automatically adjust sampling based on load
+    double adaptive_low_threshold = 0.3;  // Below this, reduce sampling frequency
+    double adaptive_high_threshold = 0.7;  // Above this, increase sampling frequency
+    std::chrono::milliseconds adaptive_min_interval{100};  // Minimum sampling interval
+    std::chrono::milliseconds adaptive_max_interval{5000};  // Maximum sampling interval
+
+    // Health monitoring options (monitoring_system v2.0.0+)
+    bool enable_health_monitoring = true;  // Monitor system health status
+    std::chrono::milliseconds health_check_interval{5000};  // Health check frequency
+    bool enable_circuit_breaker_monitoring = true;  // Monitor circuit breaker status
+
+    // Collector options (monitoring_system v2.0.0+)
+    bool enable_thread_system_collector = true;  // Collect thread pool metrics
+    bool enable_logger_system_collector = true;  // Collect logger metrics
+    bool enable_system_resource_collector = true;  // Collect CPU/memory metrics
+    bool enable_plugin_metric_collector = false;  // Collect plugin metrics
+
+    // Reliability options (monitoring_system v2.0.0+)
+    bool enable_error_boundary = true;  // Enable error boundary for fault isolation
+    bool enable_fault_tolerance = true;  // Enable fault tolerance manager
+    bool enable_retry_policy = false;  // Enable automatic retry on failures
+    std::size_t max_retry_attempts = 3;  // Maximum retry attempts
+    std::chrono::milliseconds retry_backoff_base{100};  // Base backoff time for retries
 };
 
 /**

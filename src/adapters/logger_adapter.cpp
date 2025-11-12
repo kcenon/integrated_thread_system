@@ -12,6 +12,18 @@
 #include <kcenon/logger/writers/file_writer.h>
 #include <kcenon/logger/formatters/timestamp_formatter.h>
 #include <kcenon/logger/formatters/json_formatter.h>
+
+// New adapters and backends (logger_system v1.0.0+) - Commented out until API stabilizes
+// #include <kcenon/logger/adapters/common_logger_adapter.h>
+// #include <kcenon/logger/backends/integration_backend.h>
+// #include <kcenon/logger/backends/standalone_backend.h>
+// #include <kcenon/logger/formatters/base_formatter.h>
+
+// Security features (optional)
+#ifdef ENABLE_LOGGER_SECURITY
+// #include <kcenon/logger/security/audit_logger.h>
+// #include <kcenon/logger/security/path_validator.h>
+#endif
 #else
 // Fallback to built-in implementation
 #include <iostream>
@@ -260,6 +272,9 @@ private:
 #if EXTERNAL_SYSTEMS_AVAILABLE
     // External logger_system integration
     std::unique_ptr<kcenon::logger::logger> logger_;
+
+    // TODO: Add new adapter architecture when API is stable
+    // std::unique_ptr<kcenon::logger::adapters::common_logger_adapter> logger_adapter_;
 #else
     // Built-in implementation
     mutable std::mutex log_mutex_;

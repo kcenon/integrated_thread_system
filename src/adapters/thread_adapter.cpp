@@ -10,6 +10,21 @@
 #include <kcenon/thread/core/thread_worker.h>
 #include <kcenon/thread/core/cancellation_token.h>
 #include <kcenon/thread/interfaces/thread_context.h>
+
+// New adapters and features (thread_system v1.0.0+) - Commented out until API stabilizes
+// #include <kcenon/thread/adapters/common_system_executor_adapter.h>
+// #include <kcenon/thread/interfaces/scheduler_interface.h>
+// #include <kcenon/thread/core/service_registry.h>
+// #include <kcenon/thread/interfaces/crash_handler.h>
+
+// Optional features
+#ifdef ENABLE_BOUNDED_QUEUE
+// #include <kcenon/thread/core/bounded_job_queue.h>
+#endif
+
+#ifdef ENABLE_HAZARD_POINTER
+// #include <kcenon/thread/core/hazard_pointer.h>
+#endif
 #else
 // Fallback to built-in implementation
 #include <thread>
@@ -28,7 +43,11 @@ public:
     explicit impl(const thread_config& config)
         : config_(config)
         , initialized_(false)
-#if !EXTERNAL_SYSTEMS_AVAILABLE
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        , scheduler_enabled_(config.enable_scheduler)
+        , service_registry_enabled_(config.enable_service_registry)
+        , crash_handler_enabled_(config.enable_crash_handler)
+#else
         , shutdown_(false)
 #endif
     {
@@ -86,6 +105,12 @@ public:
                     "Failed to start thread pool"
                 );
             }
+
+            // TODO: Initialize new features when APIs are stable
+            // - common_system_executor_adapter for standard interface
+            // - Scheduler interface for delayed/recurring tasks
+            // - Service registry for dependency injection
+            // - Crash handler for signal-safe recovery
 
             initialized_ = true;
             return common::ok();
@@ -331,6 +356,16 @@ private:
 #if EXTERNAL_SYSTEMS_AVAILABLE
     // External thread_system integration
     std::shared_ptr<kcenon::thread::thread_pool> thread_pool_;
+
+    // Feature flags for future v2.0 features
+    bool scheduler_enabled_;
+    bool service_registry_enabled_;
+    bool crash_handler_enabled_;
+
+    // TODO: Add new adapters when APIs are stable
+    // std::unique_ptr<kcenon::thread::adapters::common_system_executor_adapter> executor_adapter_;
+    // std::shared_ptr<kcenon::thread::interfaces::scheduler_interface> scheduler_;
+    // std::shared_ptr<kcenon::thread::core::service_registry> registry_;
 #else
     // Built-in implementation
     bool shutdown_;
@@ -396,6 +431,53 @@ void thread_adapter::cancel_token(std::shared_ptr<void> token) {
 
 bool thread_adapter::is_token_cancelled(std::shared_ptr<void> token) const {
     return pimpl_->is_token_cancelled(token);
+}
+
+// Scheduler Interface Support
+
+common::Result<std::size_t> thread_adapter::schedule_task(std::function<void()> task,
+                                                           std::chrono::milliseconds delay) {
+    // TODO: Implement when scheduler_interface API is stable
+    return common::Result<std::size_t>::err(
+        common::error_codes::INTERNAL_ERROR,
+        "Scheduler interface not yet implemented - requires thread_system v2.0+"
+    );
+}
+
+common::Result<std::size_t> thread_adapter::schedule_recurring_task(
+    std::function<void()> task,
+    std::chrono::milliseconds initial_delay,
+    std::chrono::milliseconds interval) {
+    // TODO: Implement when scheduler_interface API is stable
+    return common::Result<std::size_t>::err(
+        common::error_codes::INTERNAL_ERROR,
+        "Recurring scheduler not yet implemented - requires thread_system v2.0+"
+    );
+}
+
+common::VoidResult thread_adapter::cancel_scheduled_task(std::size_t task_id) {
+    // TODO: Implement when scheduler_interface API is stable
+    return common::VoidResult::err(
+        common::error_codes::INTERNAL_ERROR,
+        "Task cancellation not yet implemented - requires thread_system v2.0+"
+    );
+}
+
+// Feature check methods
+
+bool thread_adapter::is_scheduler_enabled() const {
+    // TODO: Implement when scheduler is available
+    return false;
+}
+
+bool thread_adapter::is_service_registry_enabled() const {
+    // TODO: Implement when service registry is available
+    return false;
+}
+
+bool thread_adapter::is_crash_handler_enabled() const {
+    // TODO: Implement when crash handler is available
+    return false;
 }
 
 } // namespace kcenon::integrated::adapters

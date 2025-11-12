@@ -49,16 +49,27 @@ public:
 
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
-            // TODO: Initialize monitoring_system components when linking is stable
-            // profiler_ = std::make_unique<kcenon::monitoring::performance_profiler>();
-            // system_monitor_ = std::make_unique<kcenon::monitoring::system_monitor>();
-
-            // TODO: Initialize new v2.0 features when APIs are stable
-            // - common_monitor_adapter for standard interface
-            // - Adaptive monitoring for efficient sampling
-            // - Health monitoring capabilities
-            // - Collectors (thread, logger, system resource)
-            // - Reliability features (circuit breaker, error boundary, fault tolerance)
+            // Initialize monitoring_system components according to v2.0.0 guide
+            // Use built-in implementation for now as external system adapters need API stabilization
+            // Future: Uncomment when monitoring_system v2.0.0+ APIs are stable
+            //
+            // monitor_adapter_ = std::make_unique<
+            //     kcenon::monitoring::adapters::common_monitor_adapter>();
+            //
+            // if (config_.enable_adaptive_monitoring) {
+            //     adaptive_monitor_ = std::make_shared<
+            //         kcenon::monitoring::adaptive::adaptive_monitor>(
+            //             config_.adaptive_low_threshold,
+            //             config_.adaptive_high_threshold,
+            //             config_.adaptive_min_interval,
+            //             config_.adaptive_max_interval);
+            // }
+            //
+            // if (config_.enable_health_monitoring) {
+            //     health_monitor_ = std::make_shared<
+            //         kcenon::monitoring::health::health_monitor>(
+            //             config_.health_check_interval);
+            // }
 
             initialized_ = true;
             start_time_ = std::chrono::steady_clock::now();

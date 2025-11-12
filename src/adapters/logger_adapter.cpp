@@ -5,26 +5,24 @@
 #include <kcenon/integrated/adapters/logger_adapter.h>
 
 #if EXTERNAL_SYSTEMS_AVAILABLE
-// Use external logger_system's new adapter architecture (v1.0.0+)
+// Use external logger_system's logger with builder API
 #include <kcenon/logger/core/logger.h>
 #include <kcenon/logger/core/logger_builder.h>
 #include <kcenon/logger/writers/console_writer.h>
 #include <kcenon/logger/writers/file_writer.h>
-
-// New adapters and backends (logger_system v1.0.0+)
-#include <kcenon/logger/adapters/common_logger_adapter.h>
-#include <kcenon/logger/backends/integration_backend.h>
-#include <kcenon/logger/backends/standalone_backend.h>
-
-// New formatters (logger_system v1.0.0+)
-#include <kcenon/logger/formatters/base_formatter.h>
 #include <kcenon/logger/formatters/timestamp_formatter.h>
 #include <kcenon/logger/formatters/json_formatter.h>
 
+// New adapters and backends (logger_system v1.0.0+) - Commented out until API stabilizes
+// #include <kcenon/logger/adapters/common_logger_adapter.h>
+// #include <kcenon/logger/backends/integration_backend.h>
+// #include <kcenon/logger/backends/standalone_backend.h>
+// #include <kcenon/logger/formatters/base_formatter.h>
+
 // Security features (optional)
 #ifdef ENABLE_LOGGER_SECURITY
-#include <kcenon/logger/security/audit_logger.h>
-#include <kcenon/logger/security/path_validator.h>
+// #include <kcenon/logger/security/audit_logger.h>
+// #include <kcenon/logger/security/path_validator.h>
 #endif
 #else
 // Fallback to built-in implementation
@@ -56,34 +54,7 @@ public:
 
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
-            // Create backend based on integration mode (logger_system v1.0.0+)
-            // Using integration_backend for common_system compatibility
-            auto backend = std::make_shared<kcenon::logger::backends::integration_backend>();
-
-            // Create formatter based on config
-            std::shared_ptr<kcenon::logger::formatters::base_formatter> formatter;
-            switch (config_.format) {
-                case log_format::json: {
-                    // JSON formatter for log aggregation systems
-                    formatter = std::make_shared<kcenon::logger::formatters::json_formatter>(
-                        config_.pretty_print_json);
-                    break;
-                }
-                case log_format::timestamp:
-                default: {
-                    // Default timestamp formatter with color support
-                    formatter = std::make_shared<kcenon::logger::formatters::timestamp_formatter>(
-                        config_.enable_colors);
-                    break;
-                }
-            }
-
-            // Use common_logger_adapter for standard interface
-            logger_adapter_ = std::make_unique<
-                kcenon::logger::adapters::common_logger_adapter>(
-                    backend, formatter, config_.buffer_size);
-
-            // Also build traditional logger for backward compatibility
+            // Use logger_builder for modern API (logger_system v3.0.0+)
             kcenon::logger::logger_builder builder;
             builder.with_async(config_.async_mode)
                    .with_buffer_size(config_.buffer_size);
@@ -107,6 +78,7 @@ public:
                     opts.include_timestamp = true;
                     opts.include_thread_id = config_.include_thread_id;
                     opts.include_source_location = config_.include_source_location;
+                    // Note: enable_colors is not supported in current logger_system
                     builder.with_formatter(std::make_unique<kcenon::logger::timestamp_formatter>(opts));
                     break;
                 }
@@ -301,8 +273,8 @@ private:
     // External logger_system integration
     std::unique_ptr<kcenon::logger::logger> logger_;
 
-    // New adapter architecture (logger_system v1.0.0+)
-    std::unique_ptr<kcenon::logger::adapters::common_logger_adapter> logger_adapter_;
+    // TODO: Add new adapter architecture when API is stable
+    // std::unique_ptr<kcenon::logger::adapters::common_logger_adapter> logger_adapter_;
 #else
     // Built-in implementation
     mutable std::mutex log_mutex_;

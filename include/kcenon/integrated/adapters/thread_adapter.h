@@ -290,8 +290,8 @@ common::VoidResult thread_adapter::register_service(const std::string& name,
     // Forward to impl
     // Note: Implementation in cpp file will handle the actual registry interaction
     return common::VoidResult::err(
-        common::error_codes::NOT_IMPLEMENTED,
-        "Service registry support requires implementation"
+        common::error_codes::INTERNAL_ERROR,
+        "Service registry support not yet implemented"
     );
 }
 
@@ -300,8 +300,8 @@ common::Result<std::shared_ptr<Interface>> thread_adapter::resolve_service(const
     // Forward to impl
     // Note: Implementation in cpp file will handle the actual registry interaction
     return common::Result<std::shared_ptr<Interface>>::err(
-        common::error_codes::NOT_IMPLEMENTED,
-        "Service registry support requires implementation"
+        common::error_codes::INTERNAL_ERROR,
+        "Service registry support not yet implemented"
     );
 }
 

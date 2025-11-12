@@ -150,6 +150,8 @@ public:
 
     void schedule_internal(std::chrono::milliseconds delay, std::function<void()> task) {
         // Scheduled tasks go through submit_internal to maintain consistent metrics
+        // Future: Use thread_adapter's scheduler_interface when API stabilizes
+        // See ADAPTER_INTEGRATION_GUIDE.md Phase 5 for scheduler integration details
         submit_internal([delay, task = std::move(task)]() mutable {
             std::this_thread::sleep_for(delay);
             task();
@@ -157,6 +159,11 @@ public:
     }
 
     size_t schedule_recurring_internal(std::chrono::milliseconds interval, std::function<void()> task) {
+        // TODO: Implement recurring scheduler using thread_adapter's scheduler_interface
+        // when thread_system v1.0.0+ scheduler API is stable
+        // See ADAPTER_INTEGRATION_GUIDE.md Phase 5 for details
+        (void)interval;
+        (void)task;
         return 0;
     }
 
@@ -167,6 +174,8 @@ public:
             metrics.active_workers = thread_adapter->worker_count();
             metrics.queue_size = thread_adapter->queue_size();
         }
+        // Future: Include enhanced metrics from monitoring_system v2.0.0+ collectors
+        // See ADAPTER_INTEGRATION_GUIDE.md Phase 5 for collector integration details
         return metrics;
     }
 
@@ -174,6 +183,9 @@ public:
         health_status status;
         auto* monitoring_adapter = coordinator_->get_monitoring_adapter();
         if (monitoring_adapter) {
+            // Get health check from monitoring_adapter
+            // Future: Include adaptive monitoring data when monitoring_system v2.0.0+ API stabilizes
+            // See ADAPTER_INTEGRATION_GUIDE.md Phase 5 for enhanced health monitoring details
             auto health_result = monitoring_adapter->check_health();
             if (health_result.is_ok()) {
                 status.overall_health = health_result.value().is_healthy() ?

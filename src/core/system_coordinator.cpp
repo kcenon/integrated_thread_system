@@ -31,9 +31,13 @@ public:
         }
 
         // Initialize subsystems in dependency order
-        // 1. Logger (no dependencies)
-        // 2. Monitoring (may use logger)
-        // 3. Thread pool (may use logger and monitoring)
+        // 1. Logger (no dependencies) - includes backend architecture and formatters
+        // 2. Monitoring (may use logger) - includes adaptive monitoring, health checks, collectors
+        // 3. Thread pool (may use logger and monitoring) - includes scheduler, service registry
+        //
+        // Note: Scheduler, adaptive monitoring, and health monitoring lifecycles are
+        // managed internally by their respective adapters based on configuration flags.
+        // See ADAPTER_INTEGRATION_GUIDE.md Phase 4 for details.
 
         try {
             logger_adapter_ = std::make_unique<adapters::logger_adapter>(config_.logger);
@@ -70,6 +74,9 @@ public:
         }
 
         // Shutdown in reverse order
+        // Thread adapter shutdown includes scheduler and service registry cleanup
+        // Monitoring adapter shutdown includes adaptive monitor, health monitor, and collector cleanup
+        // Logger adapter shutdown includes backend and formatter cleanup
         common::VoidResult result = common::ok();
 
         if (thread_adapter_) {

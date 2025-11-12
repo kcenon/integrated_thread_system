@@ -55,6 +55,9 @@ public:
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
             // Use logger_builder for modern API (logger_system v3.0.0+)
+            // Future: Consider migrating to common_logger_adapter when API stabilizes
+            // as per ADAPTER_INTEGRATION_GUIDE.md recommendations for better
+            // integration with common_system backend architecture
             kcenon::logger::logger_builder builder;
             builder.with_async(config_.async_mode)
                    .with_buffer_size(config_.buffer_size);

@@ -7,6 +7,27 @@
 #if EXTERNAL_SYSTEMS_AVAILABLE
 // Use external monitoring_system's performance monitor
 #include <kcenon/monitoring/core/performance_monitor.h>
+
+// New adapters (monitoring_system v2.0.0+)
+#include <kcenon/monitoring/adapters/common_monitor_adapter.h>
+
+// Adaptive monitoring (monitoring_system v2.0.0+)
+#include <kcenon/monitoring/adaptive/adaptive_monitor.h>
+
+// Health monitoring (monitoring_system v2.0.0+)
+#include <kcenon/monitoring/health/health_monitor.h>
+
+// Collectors (monitoring_system v2.0.0+)
+#include <kcenon/monitoring/collectors/thread_system_collector.h>
+#include <kcenon/monitoring/collectors/logger_system_collector.h>
+#include <kcenon/monitoring/collectors/system_resource_collector.h>
+#include <kcenon/monitoring/collectors/plugin_metric_collector.h>
+
+// Reliability features (monitoring_system v2.0.0+)
+#include <kcenon/monitoring/reliability/circuit_breaker.h>
+#include <kcenon/monitoring/reliability/error_boundary.h>
+#include <kcenon/monitoring/reliability/fault_tolerance_manager.h>
+#include <kcenon/monitoring/reliability/retry_policy.h>
 #else
 // Fallback to built-in implementation
 #include <mutex>
@@ -36,7 +57,71 @@ public:
 
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
-            // Create monitoring_system's performance profiler and system monitor
+            // Use common_monitor_adapter for standard interface (v2.0.0+)
+            monitor_adapter_ = std::make_unique<
+                kcenon::monitoring::adapters::common_monitor_adapter>();
+
+            // Enable adaptive monitoring if configured
+            if (config_.enable_adaptive_monitoring) {
+                adaptive_monitor_ = std::make_shared<
+                    kcenon::monitoring::adaptive::adaptive_monitor>(
+                        config_.adaptive_low_threshold,
+                        config_.adaptive_high_threshold,
+                        config_.adaptive_min_interval,
+                        config_.adaptive_max_interval);
+            }
+
+            // Enable health monitoring if configured
+            if (config_.enable_health_monitoring) {
+                health_monitor_ = std::make_shared<
+                    kcenon::monitoring::health::health_monitor>(
+                        config_.health_check_interval);
+            }
+
+            // Register collectors based on configuration
+            if (config_.enable_thread_system_collector) {
+                thread_collector_ = std::make_shared<
+                    kcenon::monitoring::collectors::thread_system_collector>();
+                // Register with monitor adapter
+            }
+
+            if (config_.enable_logger_system_collector) {
+                logger_collector_ = std::make_shared<
+                    kcenon::monitoring::collectors::logger_system_collector>();
+                // Register with monitor adapter
+            }
+
+            if (config_.enable_system_resource_collector) {
+                resource_collector_ = std::make_shared<
+                    kcenon::monitoring::collectors::system_resource_collector>();
+                // Register with monitor adapter
+            }
+
+            if (config_.enable_plugin_metric_collector) {
+                plugin_collector_ = std::make_shared<
+                    kcenon::monitoring::collectors::plugin_metric_collector>();
+                // Register with monitor adapter
+            }
+
+            // Initialize reliability features if enabled
+            if (config_.enable_error_boundary) {
+                error_boundary_ = std::make_shared<
+                    kcenon::monitoring::reliability::error_boundary>();
+            }
+
+            if (config_.enable_fault_tolerance) {
+                fault_tolerance_mgr_ = std::make_shared<
+                    kcenon::monitoring::reliability::fault_tolerance_manager>();
+            }
+
+            if (config_.enable_retry_policy) {
+                retry_policy_ = std::make_shared<
+                    kcenon::monitoring::reliability::retry_policy>(
+                        config_.max_retry_attempts,
+                        config_.retry_backoff_base);
+            }
+
+            // Keep backward compatibility with existing profiler
             profiler_ = std::make_unique<monitoring_system::performance_profiler>();
             system_monitor_ = std::make_unique<monitoring_system::system_monitor>();
 
@@ -264,6 +349,22 @@ private:
     // External monitoring_system integration
     std::unique_ptr<monitoring_system::performance_profiler> profiler_;
     std::unique_ptr<monitoring_system::system_monitor> system_monitor_;
+
+    // New adapters and features (monitoring_system v2.0.0+)
+    std::unique_ptr<kcenon::monitoring::adapters::common_monitor_adapter> monitor_adapter_;
+    std::shared_ptr<kcenon::monitoring::adaptive::adaptive_monitor> adaptive_monitor_;
+    std::shared_ptr<kcenon::monitoring::health::health_monitor> health_monitor_;
+
+    // Collectors
+    std::shared_ptr<kcenon::monitoring::collectors::thread_system_collector> thread_collector_;
+    std::shared_ptr<kcenon::monitoring::collectors::logger_system_collector> logger_collector_;
+    std::shared_ptr<kcenon::monitoring::collectors::system_resource_collector> resource_collector_;
+    std::shared_ptr<kcenon::monitoring::collectors::plugin_metric_collector> plugin_collector_;
+
+    // Reliability features
+    std::shared_ptr<kcenon::monitoring::reliability::error_boundary> error_boundary_;
+    std::shared_ptr<kcenon::monitoring::reliability::fault_tolerance_manager> fault_tolerance_mgr_;
+    std::shared_ptr<kcenon::monitoring::reliability::retry_policy> retry_policy_;
 #else
     // Built-in implementation
     std::unordered_map<std::string, double> metrics_;

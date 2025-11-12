@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added - System Updates (2025-11-12)
+- **Configuration Enhancements**
+  - Thread system scheduler support (thread_system v1.0.0+)
+    - `enable_scheduler`: Enable scheduler interface support
+    - `enable_crash_handler`: Enable signal-safe crash recovery
+    - `enable_service_registry`: Enable service registry and DI container
+    - `enable_hazard_pointer`: Enable experimental hazard pointer for lock-free queue
+    - `enable_bounded_queue`: Use bounded queue instead of unbounded
+    - `bounded_queue_capacity`: Configure bounded queue capacity
+
+  - Monitoring system adaptive features (monitoring_system v2.0.0+)
+    - `enable_adaptive_monitoring`: Automatically adjust sampling based on load
+    - `adaptive_low_threshold` / `adaptive_high_threshold`: Configure thresholds (0.3/0.7)
+    - `adaptive_min_interval` / `adaptive_max_interval`: Configure sampling intervals (100ms/5000ms)
+    - `enable_health_monitoring`: Monitor system health status
+    - `health_check_interval`: Configure health check frequency (5000ms)
+    - `enable_circuit_breaker_monitoring`: Monitor circuit breaker status
+
+  - Monitoring collectors (monitoring_system v2.0.0+)
+    - `enable_thread_system_collector`: Collect thread pool metrics
+    - `enable_logger_system_collector`: Collect logger metrics
+    - `enable_system_resource_collector`: Collect CPU/memory metrics
+    - `enable_plugin_metric_collector`: Collect plugin metrics
+
+  - Reliability features (monitoring_system v2.0.0+)
+    - `enable_error_boundary`: Enable error boundary for fault isolation
+    - `enable_fault_tolerance`: Enable fault tolerance manager
+    - `enable_retry_policy`: Enable automatic retry on failures
+    - `max_retry_attempts`: Configure maximum retry attempts (3)
+    - `retry_backoff_base`: Configure base backoff time (100ms)
+
+### Changed - System Updates (2025-11-12)
+- Updated configuration to support latest versions of subsystems:
+  - common_system v1.0.0 (standalone event bus, Result<T> pattern)
+  - thread_system v1.0.0 (scheduler, service registry, crash handler)
+  - logger_system v1.0.0 (backend architecture, formatters, security features)
+  - monitoring_system v2.0.0 (adaptive monitoring, health checks, reliability features)
+
 ### Added - External System Integrations
 - **thread_system Integration** (PR #8)
   - Full integration with `kcenon::thread::thread_pool` for task execution

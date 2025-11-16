@@ -9,8 +9,11 @@
 #include <kcenon/thread/core/thread_pool.h>
 #include <kcenon/thread/core/thread_worker.h>
 #include <kcenon/thread/core/typed_thread_pool.h>
+#include <kcenon/thread/core/typed_thread_worker.h>
+#include <kcenon/thread/core/job_types.h>
 #include <kcenon/thread/core/cancellation_token.h>
 #include <kcenon/thread/interfaces/thread_context.h>
+#include <kcenon/thread/core/../../../../src/impl/typed_pool/callback_typed_job.h>
 
 // New adapters and features (thread_system v1.0.0+)
 // #include <kcenon/thread/adapters/common_system_executor_adapter.h>
@@ -35,6 +38,32 @@
 #endif
 
 namespace kcenon::integrated::adapters {
+
+#if EXTERNAL_SYSTEMS_AVAILABLE
+/**
+ * @brief Maps integer priority (0-127) to thread_system's job_types
+ *
+ * Priority ranges:
+ * - 0-31:   Background (low priority maintenance tasks)
+ * - 32-95:  Batch (normal throughput-optimized tasks)
+ * - 96-127: RealTime (high priority immediate response tasks)
+ *
+ * @param priority Integer priority value (0-127)
+ * @return Corresponding job_types enum value
+ */
+inline kcenon::thread::job_types map_priority_to_job_type(int priority) {
+    if (priority < 0) priority = 0;
+    if (priority > 127) priority = 127;
+
+    if (priority >= 96) {
+        return kcenon::thread::job_types::RealTime;
+    } else if (priority >= 32) {
+        return kcenon::thread::job_types::Batch;
+    } else {
+        return kcenon::thread::job_types::Background;
+    }
+}
+#endif
 
 /**
  * @brief Implementation details for thread_adapter
@@ -107,6 +136,38 @@ public:
                 );
             }
 
+            // Create typed thread pool for priority-based task submission
+            typed_thread_pool_ = std::make_shared<kcenon::thread::typed_thread_pool_t<kcenon::thread::job_types>>(
+                config_.pool_name.empty() ? "integrated_typed_pool" : config_.pool_name + "_typed"
+            );
+
+            // Add worker threads to typed pool
+            for (std::size_t i = 0; i < thread_count; ++i) {
+                auto worker = std::make_unique<kcenon::thread::typed_thread_worker_t<kcenon::thread::job_types>>(
+                    kcenon::thread::get_all_job_types(),  // handle all job types
+                    true,  // use_time_tag
+                    kcenon::thread::thread_context()  // default context
+                );
+                worker->set_job_queue(typed_thread_pool_->get_job_queue());
+
+                auto enqueue_result = typed_thread_pool_->enqueue(std::move(worker));
+                if (enqueue_result.has_error()) {
+                    return common::VoidResult::err(
+                        common::error_codes::INTERNAL_ERROR,
+                        "Failed to add worker to typed pool"
+                    );
+                }
+            }
+
+            // Start the typed thread pool
+            auto typed_start_result = typed_thread_pool_->start();
+            if (typed_start_result.has_error()) {
+                return common::VoidResult::err(
+                    common::error_codes::INTERNAL_ERROR,
+                    "Failed to start typed thread pool"
+                );
+            }
+
             // TODO: Initialize new features when APIs are stable
             // - common_system_executor_adapter for standard interface
             // - Scheduler interface for delayed/recurring tasks
@@ -147,6 +208,18 @@ public:
         }
 
 #if EXTERNAL_SYSTEMS_AVAILABLE
+        // Shutdown typed thread pool first
+        if (typed_thread_pool_) {
+            auto typed_stop_result = typed_thread_pool_->stop(false);  // Graceful shutdown
+            if (typed_stop_result.has_error()) {
+                return common::VoidResult::err(
+                    common::error_codes::INTERNAL_ERROR,
+                    "Failed to stop typed thread pool"
+                );
+            }
+            typed_thread_pool_.reset();
+        }
+
         // Use thread_system's shutdown
         bool success = thread_pool_->shutdown_pool(false);  // Graceful shutdown
         if (!success) {
@@ -222,6 +295,64 @@ public:
         condition_.notify_one();
 
         return common::ok();
+#endif
+    }
+
+    common::VoidResult execute_with_priority(int priority, std::function<void()> task) {
+        if (!initialized_) {
+            return common::VoidResult::err(
+                common::error_codes::INVALID_ARGUMENT,
+                "Thread adapter not initialized"
+            );
+        }
+
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        // Use typed thread pool for priority-based execution
+        if (typed_thread_pool_) {
+            auto job_type = map_priority_to_job_type(priority);
+
+            // Wrap the task to return result_void
+            auto wrapped_callback = [task = std::move(task)]() -> kcenon::thread::result_void {
+                try {
+                    task();
+                    return kcenon::thread::result_void{};
+                } catch (const std::exception& e) {
+                    return kcenon::thread::result_void(
+                        kcenon::thread::error(
+                            kcenon::thread::error_code::job_execution_failed,
+                            std::string("Task execution failed: ") + e.what()
+                        )
+                    );
+                }
+            };
+
+            // Create callback-based typed job with priority
+            auto typed_job = std::make_unique<kcenon::thread::callback_typed_job_t<kcenon::thread::job_types>>(
+                wrapped_callback,
+                job_type,
+                "priority_task"
+            );
+
+            // Enqueue to typed pool
+            auto enqueue_result = typed_thread_pool_->enqueue(std::move(typed_job));
+            if (enqueue_result.has_error()) {
+                // Fallback to regular pool if typed pool fails
+                bool success = thread_pool_->submit_task(std::move(task));
+                if (!success) {
+                    return common::VoidResult::err(
+                        common::error_codes::INTERNAL_ERROR,
+                        "Failed to enqueue task to both typed and regular pools"
+                    );
+                }
+            }
+            return common::ok();
+        } else {
+            // Fallback to regular pool if typed pool not available
+            return execute(std::move(task));
+        }
+#else
+        // Built-in implementation - priority ignored
+        return execute(std::move(task));
 #endif
     }
 
@@ -357,6 +488,7 @@ private:
 #if EXTERNAL_SYSTEMS_AVAILABLE
     // External thread_system integration
     std::shared_ptr<kcenon::thread::thread_pool> thread_pool_;
+    std::shared_ptr<kcenon::thread::typed_thread_pool_t<kcenon::thread::job_types>> typed_thread_pool_;
 
     // Feature flags for future v2.0 features
     bool scheduler_enabled_;
@@ -404,6 +536,10 @@ bool thread_adapter::is_initialized() const {
 
 common::VoidResult thread_adapter::execute(std::function<void()> task) {
     return pimpl_->execute(std::move(task));
+}
+
+common::VoidResult thread_adapter::execute_with_priority(int priority, std::function<void()> task) {
+    return pimpl_->execute_with_priority(priority, std::move(task));
 }
 
 std::size_t thread_adapter::worker_count() const {

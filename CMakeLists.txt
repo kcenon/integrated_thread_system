@@ -379,6 +379,7 @@ if(EXTERNAL_SYSTEMS_AVAILABLE)
             ${THREAD_SYSTEM_DIR}/include
             ${LOGGER_SYSTEM_DIR}/include
             ${MONITORING_SYSTEM_DIR}/include
+            ${MONITORING_SYSTEM_DIR}/src
     )
 
     target_include_directories(integrated_thread_system_enhanced
@@ -386,6 +387,7 @@ if(EXTERNAL_SYSTEMS_AVAILABLE)
             ${THREAD_SYSTEM_DIR}/include
             ${LOGGER_SYSTEM_DIR}/include
             ${MONITORING_SYSTEM_DIR}/include
+            ${MONITORING_SYSTEM_DIR}/src
     )
 endif()
 
@@ -440,8 +442,8 @@ if(EXTERNAL_SYSTEMS_AVAILABLE)
 
     # Try to find monitoring_system library
     find_library(MONITORING_SYSTEM_LIB
-        NAMES MonitoringSystem libMonitoringSystem
-        PATHS ${MONITORING_SYSTEM_DIR}/build/lib
+        NAMES monitoring_system libmonitoring_system MonitoringSystem libMonitoringSystem
+        PATHS ${MONITORING_SYSTEM_DIR}/build ${MONITORING_SYSTEM_DIR}/build/lib
         NO_DEFAULT_PATH
     )
 

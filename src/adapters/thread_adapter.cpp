@@ -442,6 +442,30 @@ public:
 #endif
     }
 
+    bool is_scheduler_enabled() const {
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        return scheduler_enabled_;
+#else
+        return false;
+#endif
+    }
+
+    bool is_service_registry_enabled() const {
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        return service_registry_enabled_;
+#else
+        return false;
+#endif
+    }
+
+    bool is_crash_handler_enabled() const {
+#if EXTERNAL_SYSTEMS_AVAILABLE
+        return crash_handler_enabled_;
+#else
+        return false;
+#endif
+    }
+
 private:
 #if !EXTERNAL_SYSTEMS_AVAILABLE
     void worker_thread() {
@@ -603,18 +627,15 @@ common::VoidResult thread_adapter::cancel_scheduled_task(std::size_t task_id) {
 // Feature check methods
 
 bool thread_adapter::is_scheduler_enabled() const {
-    // TODO: Implement when scheduler is available
-    return false;
+    return pimpl_->is_scheduler_enabled();
 }
 
 bool thread_adapter::is_service_registry_enabled() const {
-    // TODO: Implement when service registry is available
-    return false;
+    return pimpl_->is_service_registry_enabled();
 }
 
 bool thread_adapter::is_crash_handler_enabled() const {
-    // TODO: Implement when crash handler is available
-    return false;
+    return pimpl_->is_crash_handler_enabled();
 }
 
 } // namespace kcenon::integrated::adapters

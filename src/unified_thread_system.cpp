@@ -274,6 +274,30 @@ public:
         return {};
     }
 
+    bool is_scheduler_enabled() const {
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        if (!thread_adapter) {
+            return false;
+        }
+        return thread_adapter->is_scheduler_enabled();
+    }
+
+    bool is_service_registry_enabled() const {
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        if (!thread_adapter) {
+            return false;
+        }
+        return thread_adapter->is_service_registry_enabled();
+    }
+
+    bool is_crash_handler_enabled() const {
+        auto* thread_adapter = coordinator_->get_thread_adapter();
+        if (!thread_adapter) {
+            return false;
+        }
+        return thread_adapter->is_crash_handler_enabled();
+    }
+
     std::shared_ptr<void> create_cancellation_token() {
         auto* thread_adapter = coordinator_->get_thread_adapter();
         if (!thread_adapter) {
@@ -453,6 +477,18 @@ void unified_thread_system::unload_plugin(const std::string& plugin_name) {
 
 std::vector<std::string> unified_thread_system::list_plugins() const {
     return pimpl_->list_plugins();
+}
+
+bool unified_thread_system::is_scheduler_enabled() const {
+    return pimpl_->is_scheduler_enabled();
+}
+
+bool unified_thread_system::is_service_registry_enabled() const {
+    return pimpl_->is_service_registry_enabled();
+}
+
+bool unified_thread_system::is_crash_handler_enabled() const {
+    return pimpl_->is_crash_handler_enabled();
 }
 
 } // namespace kcenon::integrated

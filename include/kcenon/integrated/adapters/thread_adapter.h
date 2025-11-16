@@ -317,7 +317,7 @@ common::VoidResult thread_adapter::register_service(const std::string& name,
     }
 #else
     return common::VoidResult::err(
-        common::error_codes::PRECONDITION_FAILED,
+        common::error::codes::common_errors::not_initialized,
         "Service registry requires thread_system (EXTERNAL_SYSTEMS_AVAILABLE=1)"
     );
 #endif
@@ -346,7 +346,7 @@ common::Result<std::shared_ptr<Interface>> thread_adapter::resolve_service(const
     }
 #else
     return common::Result<std::shared_ptr<Interface>>::err(
-        common::error_codes::PRECONDITION_FAILED,
+        common::error::codes::common_errors::not_initialized,
         "Service registry requires thread_system (EXTERNAL_SYSTEMS_AVAILABLE=1)"
     );
 #endif

@@ -74,6 +74,14 @@ public:
     common::VoidResult execute(std::function<void()> task);
 
     /**
+     * @brief Execute a task with priority
+     * @param priority Priority level (0-127: 0-31=Background, 32-95=Batch, 96-127=RealTime)
+     * @param task Task to execute
+     * @return Result indicating success or error
+     */
+    common::VoidResult execute_with_priority(int priority, std::function<void()> task);
+
+    /**
      * @brief Submit a task and get a future
      * @tparam F Function type
      * @tparam Args Argument types
@@ -253,14 +261,10 @@ auto thread_adapter::submit_with_priority(int priority, F&& f, Args&&... args)
 
     auto result = task->get_future();
 
-    // Note: Priority mapping for thread_system's job_types:
+    // Priority mapping for thread_system's job_types:
     // 0-31: Background, 32-95: Batch, 96-127: RealTime
-    // Current implementation uses standard thread_pool which doesn't support priority
-    // TODO: Integrate typed_thread_pool for true priority-based execution
-    // For now, priority is logged but execution uses standard queue
-    (void)priority;  // Suppress unused variable warning
-
-    execute([task]() { (*task)(); });
+    // Uses typed_thread_pool for true priority-based execution
+    execute_with_priority(priority, [task]() { (*task)(); });
 
     return result;
 }

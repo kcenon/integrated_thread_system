@@ -18,9 +18,9 @@ This document summarizes the improvements made during Sprint 1-3 development cyc
 
 **Version Requirements**:
 - common_system >= v1.0.0
-- thread_system >= v2.0.0
+- thread_system >= v1.0.0
 - logger_system >= v1.0.0
-- monitoring_system >= v1.0.0
+- monitoring_system >= v2.0.0
 
 ### 1.3 logger_system v3.0.0 API Integration
 **Implemented**:
@@ -130,8 +130,8 @@ None. Existing code continues to work without modifications.
 ## References
 
 - [common_system v1.0.0](https://github.com/kcenon/common_system/releases/tag/v1.0.0)
-- [thread_system v2.0.0](https://github.com/kcenon/thread_system)
-- [logger_system v3.0.0](https://github.com/kcenon/logger_system/releases/tag/v3.0.0)
+- [thread_system v1.0.0](https://github.com/kcenon/thread_system)
+- [logger_system v1.0.0](https://github.com/kcenon/logger_system)
 - [DEPENDENCIES.md](../DEPENDENCIES.md)
 - [CHANGELOG.md](../CHANGELOG.md)
 

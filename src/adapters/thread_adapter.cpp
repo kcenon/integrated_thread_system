@@ -8,13 +8,14 @@
 // Use external thread_system's thread_pool
 #include <kcenon/thread/core/thread_pool.h>
 #include <kcenon/thread/core/thread_worker.h>
+#include <kcenon/thread/core/typed_thread_pool.h>
 #include <kcenon/thread/core/cancellation_token.h>
 #include <kcenon/thread/interfaces/thread_context.h>
 
-// New adapters and features (thread_system v1.0.0+) - Commented out until API stabilizes
+// New adapters and features (thread_system v1.0.0+)
 // #include <kcenon/thread/adapters/common_system_executor_adapter.h>
 // #include <kcenon/thread/interfaces/scheduler_interface.h>
-// #include <kcenon/thread/core/service_registry.h>
+#include <kcenon/thread/core/service_registry.h>
 // #include <kcenon/thread/interfaces/crash_handler.h>
 
 // Optional features

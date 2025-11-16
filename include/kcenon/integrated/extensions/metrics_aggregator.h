@@ -33,6 +33,7 @@ struct aggregated_metrics {
     std::size_t thread_pool_queue_size{0};
     std::size_t tasks_submitted{0};
     std::size_t tasks_completed{0};
+    std::size_t tasks_failed{0};  // Tasks that failed to submit
 
     // Logger metrics
     std::size_t log_messages_written{0};
@@ -86,10 +87,11 @@ public:
 
     /**
      * @brief Increment task counters (thread-safe)
-     * Called from thread_adapter when tasks are submitted/completed
+     * Called from unified_thread_system when tasks are submitted/completed/failed
      */
     void increment_tasks_submitted();
     void increment_tasks_completed();
+    void increment_tasks_failed();  // Called when task submission fails
 
 private:
     class impl;

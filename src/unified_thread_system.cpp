@@ -110,8 +110,8 @@ public:
 
         auto result = thread_adapter->execute(std::move(wrapped_task));
         if (result.is_err()) {
-            // Decrement submitted counter if submission fails
-            // TODO: Add decrement method or track failed submissions separately
+            // Track failed submission separately
+            metrics_aggregator_->increment_tasks_failed();
             throw std::runtime_error("Failed to submit task: " + result.error().message);
         }
     }

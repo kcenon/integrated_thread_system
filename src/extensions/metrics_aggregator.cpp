@@ -21,6 +21,7 @@ public:
         , monitoring_adapter_(nullptr)
         , tasks_submitted_(0)
         , tasks_completed_(0)
+        , tasks_failed_(0)
     {}
 
     common::VoidResult initialize() {
@@ -65,6 +66,7 @@ public:
             metrics.thread_pool_queue_size = thread_adapter_->queue_size();
             metrics.tasks_submitted = tasks_submitted_.load();
             metrics.tasks_completed = tasks_completed_.load();
+            metrics.tasks_failed = tasks_failed_.load();
         }
 
         // Collect monitoring system metrics (CPU, memory)
@@ -197,6 +199,10 @@ public:
         tasks_completed_.fetch_add(1, std::memory_order_relaxed);
     }
 
+    void increment_tasks_failed() {
+        tasks_failed_.fetch_add(1, std::memory_order_relaxed);
+    }
+
 private:
     bool initialized_;
     adapters::thread_adapter* thread_adapter_;
@@ -206,6 +212,7 @@ private:
     // Counters (thread-safe)
     std::atomic<std::size_t> tasks_submitted_;
     std::atomic<std::size_t> tasks_completed_;
+    std::atomic<std::size_t> tasks_failed_;
 
     // Latest collected metrics
     aggregated_metrics latest_metrics_;
@@ -254,6 +261,10 @@ void metrics_aggregator::increment_tasks_submitted() {
 
 void metrics_aggregator::increment_tasks_completed() {
     pimpl_->increment_tasks_completed();
+}
+
+void metrics_aggregator::increment_tasks_failed() {
+    pimpl_->increment_tasks_failed();
 }
 
 } // namespace kcenon::integrated::extensions

@@ -8,18 +8,9 @@
 // Use external monitoring_system's performance monitor
 #include <kcenon/monitoring/core/performance_monitor.h>
 
-// New adapters and features (monitoring_system v2.0.0+) - Commented out until API stabilizes
-// #include <kcenon/monitoring/adapters/common_monitor_adapter.h>
-// #include <kcenon/monitoring/adaptive/adaptive_monitor.h>
-// #include <kcenon/monitoring/health/health_monitor.h>
-// #include <kcenon/monitoring/collectors/thread_system_collector.h>
-// #include <kcenon/monitoring/collectors/logger_system_collector.h>
-// #include <kcenon/monitoring/collectors/system_resource_collector.h>
-// #include <kcenon/monitoring/collectors/plugin_metric_collector.h>
-// #include <kcenon/monitoring/reliability/circuit_breaker.h>
-// #include <kcenon/monitoring/reliability/error_boundary.h>
-// #include <kcenon/monitoring/reliability/fault_tolerance_manager.h>
-// #include <kcenon/monitoring/reliability/retry_policy.h>
+// New adapters and features (monitoring_system v2.0.0+)
+#include <kcenon/monitoring/adaptive/adaptive_monitor.h>
+#include <kcenon/monitoring/health/health_monitor.h>
 #else
 // Fallback to built-in implementation
 #include <mutex>
@@ -49,27 +40,23 @@ public:
 
         try {
 #if EXTERNAL_SYSTEMS_AVAILABLE
-            // Initialize monitoring_system components according to v2.0.0 guide
-            // Use built-in implementation for now as external system adapters need API stabilization
-            // Future: Uncomment when monitoring_system v2.0.0+ APIs are stable
-            //
-            // monitor_adapter_ = std::make_unique<
-            //     kcenon::monitoring::adapters::common_monitor_adapter>();
-            //
-            // if (config_.enable_adaptive_monitoring) {
-            //     adaptive_monitor_ = std::make_shared<
-            //         kcenon::monitoring::adaptive::adaptive_monitor>(
-            //             config_.adaptive_low_threshold,
-            //             config_.adaptive_high_threshold,
-            //             config_.adaptive_min_interval,
-            //             config_.adaptive_max_interval);
-            // }
-            //
-            // if (config_.enable_health_monitoring) {
-            //     health_monitor_ = std::make_shared<
-            //         kcenon::monitoring::health::health_monitor>(
-            //             config_.health_check_interval);
-            // }
+            // Initialize monitoring_system v2.0.0+ components
+            if (config_.enable_adaptive_monitoring) {
+                adaptive_monitor_ = std::make_unique<kcenon::monitoring::adaptive_monitor>();
+                auto result = adaptive_monitor_->start();
+                if (!result.is_ok()) {
+                    return common::VoidResult::err(
+                        common::error_codes::INTERNAL_ERROR,
+                        "Failed to start adaptive monitor"
+                    );
+                }
+            }
+
+            if (config_.enable_health_monitoring) {
+                kcenon::monitoring::health_monitor_config health_cfg;
+                health_cfg.check_interval = config_.health_check_interval;
+                health_monitor_ = std::make_unique<kcenon::monitoring::health_monitor>(health_cfg);
+            }
 
             initialized_ = true;
             start_time_ = std::chrono::steady_clock::now();
@@ -94,12 +81,15 @@ public:
         }
 
 #if EXTERNAL_SYSTEMS_AVAILABLE
-        // TODO: Clear resources when monitoring_system is stable
-        // if (profiler_) {
-        //     profiler_->clear_all_samples();
-        //     profiler_.reset();
-        // }
-        // system_monitor_.reset();
+        // Clean up monitoring_system v2.0.0+ components
+        if (adaptive_monitor_) {
+            adaptive_monitor_->stop();
+            adaptive_monitor_.reset();
+        }
+
+        if (health_monitor_) {
+            health_monitor_.reset();
+        }
 #else
         std::lock_guard<std::mutex> lock(metrics_mutex_);
         metrics_.clear();
@@ -191,16 +181,36 @@ public:
         }
 
         common::interfaces::health_check_result result;
-        result.status = common::interfaces::health_status::healthy;
-        result.message = "Monitoring adapter is operational";
         result.timestamp = std::chrono::system_clock::now();
 
 #if EXTERNAL_SYSTEMS_AVAILABLE
-        // TODO: Get system health when API is stable
-        // if (system_monitor_) {
-        //     auto sys_metrics_result = system_monitor_->get_current_metrics();
-        //     ...
-        // }
+        if (health_monitor_) {
+            auto health_result = health_monitor_->check_health();
+
+            // Map monitoring_system health_status to common health_status
+            switch (health_result.status) {
+                case kcenon::monitoring::health_status::healthy:
+                    result.status = common::interfaces::health_status::healthy;
+                    break;
+                case kcenon::monitoring::health_status::degraded:
+                    result.status = common::interfaces::health_status::degraded;
+                    break;
+                case kcenon::monitoring::health_status::unhealthy:
+                    result.status = common::interfaces::health_status::unhealthy;
+                    break;
+                default:
+                    result.status = common::interfaces::health_status::unknown;
+                    break;
+            }
+
+            result.message = health_result.message;
+        } else {
+            result.status = common::interfaces::health_status::healthy;
+            result.message = "Monitoring adapter is operational (health monitoring disabled)";
+        }
+#else
+        result.status = common::interfaces::health_status::healthy;
+        result.message = "Monitoring adapter is operational";
 #endif
 
         return common::Result<common::interfaces::health_check_result>::ok(result);
@@ -235,18 +245,10 @@ private:
     std::chrono::steady_clock::time_point start_time_;
 
 #if EXTERNAL_SYSTEMS_AVAILABLE
-    // External monitoring_system integration - commented out until linking is stable
-    // std::unique_ptr<kcenon::monitoring::performance_profiler> profiler_;
-    // std::unique_ptr<kcenon::monitoring::system_monitor> system_monitor_;
-
-    // TODO: Add new adapters and features when APIs are stable
-    // std::unique_ptr<kcenon::monitoring::adapters::common_monitor_adapter> monitor_adapter_;
-    // std::shared_ptr<kcenon::monitoring::adaptive::adaptive_monitor> adaptive_monitor_;
-    // std::shared_ptr<kcenon::monitoring::health::health_monitor> health_monitor_;
-    // std::shared_ptr<kcenon::monitoring::collectors::thread_system_collector> thread_collector_;
-    // std::shared_ptr<kcenon::monitoring::collectors::logger_system_collector> logger_collector_;
-    // std::shared_ptr<kcenon::monitoring::collectors::system_resource_collector> resource_collector_;
-    // std::shared_ptr<kcenon::monitoring::collectors::plugin_metric_collector> plugin_collector_;
+    // External monitoring_system integration
+    // v2.0.0+ features
+    std::unique_ptr<kcenon::monitoring::adaptive_monitor> adaptive_monitor_;
+    std::unique_ptr<kcenon::monitoring::health_monitor> health_monitor_;
     // std::shared_ptr<kcenon::monitoring::reliability::error_boundary> error_boundary_;
     // std::shared_ptr<kcenon::monitoring::reliability::fault_tolerance_manager> fault_tolerance_mgr_;
     // std::shared_ptr<kcenon::monitoring::reliability::retry_policy> retry_policy_;

@@ -17,6 +17,12 @@ Development guides and build information:
 - **BUILD_SCRIPTS.md**: Build system and script documentation
 - **INTEGRATION_GUIDE.md**: Integration with external systems
 
+### 📋 [Planning & Improvement](.)
+Project planning and improvement documentation:
+- **IMPROVEMENT_SUMMARY.md**: Quick summary of improvement plan (⚡ Start here!)
+- **IMPROVEMENT_PLAN.md**: Comprehensive improvement plan with phase-based roadmap
+- **SPRINT_IMPROVEMENTS.md**: Sprint-based improvement tracking
+
 ### 📚 [API Reference](api/)
 Detailed API documentation and advanced features:
 - **ADVANCED_FEATURES_GUIDE.md**: Advanced usage patterns and features
@@ -51,12 +57,18 @@ Deployment guides and production configurations
 2. Review [Design Validation](architecture/DESIGN_VALIDATION.md)
 3. Understand the [Project Structure](architecture/PROJECT_STRUCTURE.md)
 
+### For Project Managers & Maintainers
+1. Review the [Improvement Plan](IMPROVEMENT_PLAN.md)
+2. Track progress in [Sprint Improvements](SPRINT_IMPROVEMENTS.md)
+3. Monitor [Changelog](../CHANGELOG.md) for updates
+
 ## 📊 Documentation Categories
 
 | Category | Purpose | Target Audience |
 |----------|---------|----------------|
 | Architecture | System design and structure | Architects, Senior Developers |
 | Development | Build and integration guides | Developers, DevOps |
+| Planning & Improvement | Roadmaps and improvement plans | Project Managers, Maintainers |
 | API | Detailed API reference | Developers, Integrators |
 | Guides | User guides and tutorials | All Users |
 | Getting Started | Quick start tutorials | New Users |

@@ -4,14 +4,16 @@ This document describes the external dependencies required by integrated_thread_
 
 ## Required System Dependencies
 
-integrated_thread_system requires the following external systems to be available:
+integrated_thread_system v2.0.0 requires the following external systems to be available:
 
-| System | Purpose | Repository |
-|--------|---------|------------|
-| **common_system** | Result<T> pattern, error codes, interfaces | [kcenon/common_system](https://github.com/kcenon/common_system) |
-| **thread_system** | Thread pool, cancellation tokens, job queues | [kcenon/thread_system](https://github.com/kcenon/thread_system) |
-| **logger_system** | Asynchronous logging, formatters, writers | [kcenon/logger_system](https://github.com/kcenon/logger_system) |
-| **monitoring_system** | Performance profiling, system metrics | [kcenon/monitoring_system](https://github.com/kcenon/monitoring_system) |
+| System | Required Version | Purpose | Repository |
+|--------|-----------------|---------|------------|
+| **common_system** | v1.0.0+ | Result<T> pattern, error codes, standalone event bus | [kcenon/common_system](https://github.com/kcenon/common_system) |
+| **thread_system** | v1.0.0+ | Thread pool, scheduler, service registry, crash handler | [kcenon/thread_system](https://github.com/kcenon/thread_system) |
+| **logger_system** | v1.0.0+ | Backend architecture, formatters, async logging | [kcenon/logger_system](https://github.com/kcenon/logger_system) |
+| **monitoring_system** | v2.0.0+ | Adaptive monitoring, health checks, reliability features | [kcenon/monitoring_system](https://github.com/kcenon/monitoring_system) |
+
+> **Note**: See [VERSION_COMPATIBILITY.md](docs/VERSION_COMPATIBILITY.md) for detailed compatibility matrix and upgrade paths.
 
 ## Library Dependencies
 

@@ -348,6 +348,13 @@ public:
     void unload_plugin(const std::string& plugin_name);
     std::vector<std::string> list_plugins() const;
 
+    /**
+     * @brief Feature check methods (thread_system v1.0.0+)
+     */
+    bool is_scheduler_enabled() const;
+    bool is_service_registry_enabled() const;
+    bool is_crash_handler_enabled() const;
+
 private:
     class impl;
     std::unique_ptr<impl> pimpl_;

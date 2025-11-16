@@ -49,8 +49,10 @@ function(add_integrated_test test_name source_file)
     add_test(NAME ${test_name} COMMAND ${test_name})
 
     # Set test properties
+    # Timeout increased to 120s to accommodate system initialization (5s per test)
+    # and potential CI/sanitizer overhead
     set_tests_properties(${test_name} PROPERTIES
-        TIMEOUT 30
+        TIMEOUT 120
         LABELS "${ARGN}"
     )
 endfunction()

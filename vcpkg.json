@@ -17,8 +17,7 @@
     "testing": {
       "description": "Build with testing support",
       "dependencies": [
-        "gtest",
-        "gmock"
+        "gtest"
       ]
     },
     "benchmarking": {

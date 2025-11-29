@@ -32,10 +32,16 @@ endfunction()
 add_integrated_example(hello_thread "01_basic/hello_thread.cpp")
 add_integrated_example(simple_tasks "01_basic/simple_tasks.cpp")
 
+# Monitoring examples (monitoring_system v4.0.0 features)
+add_integrated_example(adaptive_monitoring_demo "monitoring/adaptive_monitoring_demo.cpp")
+add_integrated_example(health_check_demo "monitoring/health_check_demo.cpp")
+
 # Create a target to build all examples
 add_custom_target(examples_all DEPENDS
     hello_thread
     simple_tasks
+    adaptive_monitoring_demo
+    health_check_demo
 )
 
 # Install examples if requested
@@ -43,6 +49,8 @@ if(INTEGRATED_THREAD_SYSTEM_INSTALL_EXAMPLES)
     install(TARGETS
         hello_thread
         simple_tasks
+        adaptive_monitoring_demo
+        health_check_demo
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/examples
         COMPONENT examples
     )
@@ -51,6 +59,8 @@ if(INTEGRATED_THREAD_SYSTEM_INSTALL_EXAMPLES)
     install(FILES
         01_basic/hello_thread.cpp
         01_basic/simple_tasks.cpp
+        monitoring/adaptive_monitoring_demo.cpp
+        monitoring/health_check_demo.cpp
         DESTINATION ${CMAKE_INSTALL_DOCDIR}/examples
         COMPONENT examples
     )
@@ -85,3 +95,5 @@ endif()
 message(STATUS "Examples configured:")
 message(STATUS "  - hello_thread: Basic threading demonstration")
 message(STATUS "  - simple_tasks: Simple task execution showcase")
+message(STATUS "  - adaptive_monitoring_demo: Adaptive monitoring v4.0.0 features")
+message(STATUS "  - health_check_demo: Health check v4.0.0 features")

@@ -41,20 +41,16 @@ add_custom_target(examples_all DEPENDS
 # Install examples if requested
 if(INTEGRATED_THREAD_SYSTEM_INSTALL_EXAMPLES)
     install(TARGETS
-        basic_usage_example
-        comprehensive_example
-        typed_thread_pool_demo
-        adaptive_optimization_demo
+        hello_thread
+        simple_tasks
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/examples
         COMPONENT examples
     )
 
     # Install source files for reference
     install(FILES
-        basic_usage_example.cpp
-        comprehensive_example.cpp
-        typed_thread_pool_demo.cpp
-        adaptive_optimization_demo.cpp
+        01_basic/hello_thread.cpp
+        01_basic/simple_tasks.cpp
         DESTINATION ${CMAKE_INSTALL_DOCDIR}/examples
         COMPONENT examples
     )
@@ -65,26 +61,15 @@ if(INTEGRATED_THREAD_SYSTEM_BUILD_TESTS)
     enable_testing()
 
     # Basic smoke tests - just run examples with timeout
-    add_test(NAME basic_usage_example_test
-             COMMAND basic_usage_example
+    add_test(NAME hello_thread_test
+             COMMAND hello_thread
              WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/examples)
-    set_tests_properties(basic_usage_example_test PROPERTIES TIMEOUT 30)
+    set_tests_properties(hello_thread_test PROPERTIES TIMEOUT 30)
 
-    add_test(NAME typed_thread_pool_demo_test
-             COMMAND typed_thread_pool_demo
+    add_test(NAME simple_tasks_test
+             COMMAND simple_tasks
              WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/examples)
-    set_tests_properties(typed_thread_pool_demo_test PROPERTIES TIMEOUT 60)
-
-    add_test(NAME adaptive_optimization_demo_test
-             COMMAND adaptive_optimization_demo
-             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/examples)
-    set_tests_properties(adaptive_optimization_demo_test PROPERTIES TIMEOUT 120)
-
-    # Comprehensive example needs more time
-    add_test(NAME comprehensive_example_test
-             COMMAND comprehensive_example
-             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/examples)
-    set_tests_properties(comprehensive_example_test PROPERTIES TIMEOUT 180)
+    set_tests_properties(simple_tasks_test PROPERTIES TIMEOUT 60)
 endif()
 
 # Documentation for examples
@@ -98,7 +83,5 @@ if(INTEGRATED_THREAD_SYSTEM_BUILD_DOCS)
 endif()
 
 message(STATUS "Examples configured:")
-message(STATUS "  - basic_usage_example: Simple API demonstration")
-message(STATUS "  - comprehensive_example: Full feature showcase")
-message(STATUS "  - typed_thread_pool_demo: Priority-based scheduling demo")
-message(STATUS "  - adaptive_optimization_demo: Queue optimization showcase")
+message(STATUS "  - hello_thread: Basic threading demonstration")
+message(STATUS "  - simple_tasks: Simple task execution showcase")

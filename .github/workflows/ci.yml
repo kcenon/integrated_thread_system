@@ -28,9 +28,9 @@ jobs:
           - os: ubuntu-22.04
             compiler: clang
             triplet: x64-linux
-          - os: macos-13
+          - os: macos-14
             compiler: clang
-            triplet: x64-osx
+            triplet: arm64-osx
           - os: windows-2022
             compiler: msvc
             triplet: x64-windows

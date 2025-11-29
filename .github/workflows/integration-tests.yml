@@ -124,6 +124,8 @@ jobs:
       run: |
         mkdir -p build
         cd build
+
+        # Use default compiler (gcc on Linux, clang on macOS)
         cmake .. \
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \

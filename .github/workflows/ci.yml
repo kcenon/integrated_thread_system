@@ -78,7 +78,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y cmake build-essential gdb pkg-config curl zip unzip tar autoconf automake autoconf-archive ninja-build
-        sudo apt install -y clang lld
+        sudo apt install -y clang lld libc++-dev libc++abi-dev
         sudo apt install -y libgtest-dev libgmock-dev
         sudo apt install -y libfmt-dev nlohmann-json3-dev
 
@@ -196,6 +196,15 @@ jobs:
       continue-on-error: true
       run: |
         cd build
+
+        # Set up compiler flags for libc++ when using clang on Linux
+        EXTRA_CXX_FLAGS=""
+        EXTRA_LINKER_FLAGS=""
+        if [ "${{ matrix.compiler }}" = "clang" ] && [ "${{ runner.os }}" = "Linux" ]; then
+          EXTRA_CXX_FLAGS="-stdlib=libc++"
+          EXTRA_LINKER_FLAGS="-stdlib=libc++ -lc++abi"
+        fi
+
         cmake .. \
           -G Ninja \
           -DBUILD_TESTS=ON \
@@ -203,7 +212,10 @@ jobs:
           -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
           -DCMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
           -DCMAKE_C_COMPILER=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }} \
-          -DCMAKE_CXX_COMPILER=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }} \
+          -DCMAKE_CXX_FLAGS="$EXTRA_CXX_FLAGS" \
+          -DCMAKE_EXE_LINKER_FLAGS="$EXTRA_LINKER_FLAGS" \
+          -DCMAKE_SHARED_LINKER_FLAGS="$EXTRA_LINKER_FLAGS"
 
         cmake --build . --parallel
         ctest --output-on-failure
@@ -235,6 +247,14 @@ jobs:
         mkdir -p build
         cd build
 
+        # Set up compiler flags for libc++ when using clang on Linux
+        EXTRA_CXX_FLAGS=""
+        EXTRA_LINKER_FLAGS=""
+        if [ "${{ matrix.compiler }}" = "clang" ] && [ "${{ runner.os }}" = "Linux" ]; then
+          EXTRA_CXX_FLAGS="-stdlib=libc++"
+          EXTRA_LINKER_FLAGS="-stdlib=libc++ -lc++abi"
+        fi
+
         cmake .. \
           -G Ninja \
           -DBUILD_TESTS=ON \
@@ -243,7 +263,10 @@ jobs:
           -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
           -DUSE_STD_FORMAT=ON \
           -DCMAKE_C_COMPILER=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }} \
-          -DCMAKE_CXX_COMPILER=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }} \
+          -DCMAKE_CXX_FLAGS="$EXTRA_CXX_FLAGS" \
+          -DCMAKE_EXE_LINKER_FLAGS="$EXTRA_LINKER_FLAGS" \
+          -DCMAKE_SHARED_LINKER_FLAGS="$EXTRA_LINKER_FLAGS"
 
         cmake --build . --parallel
 
@@ -354,7 +377,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y cmake build-essential ninja-build clang lld
+        sudo apt install -y cmake build-essential ninja-build clang lld libc++-dev libc++abi-dev
         sudo apt install -y libgtest-dev libgmock-dev
         sudo apt install -y libfmt-dev nlohmann-json3-dev
 
@@ -370,9 +393,9 @@ jobs:
           -DCMAKE_C_COMPILER=clang \
           -DCMAKE_CXX_COMPILER=clang++ \
           -DCMAKE_C_FLAGS="${{ matrix.sanitizer.flags }}" \
-          -DCMAKE_CXX_FLAGS="${{ matrix.sanitizer.flags }}" \
-          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.sanitizer.flags }}" \
-          -DCMAKE_SHARED_LINKER_FLAGS="${{ matrix.sanitizer.flags }}"
+          -DCMAKE_CXX_FLAGS="${{ matrix.sanitizer.flags }} -stdlib=libc++" \
+          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.sanitizer.flags }} -stdlib=libc++ -lc++abi" \
+          -DCMAKE_SHARED_LINKER_FLAGS="${{ matrix.sanitizer.flags }} -stdlib=libc++ -lc++abi"
 
     - name: Build with ${{ matrix.sanitizer.name }}
       run: |

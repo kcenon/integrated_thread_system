@@ -5,6 +5,7 @@
 #include <kcenon/integrated/adapters/monitoring_adapter.h>
 
 #include <format>
+#include <string>
 
 #if EXTERNAL_SYSTEMS_AVAILABLE
 // Core monitoring components
@@ -120,7 +121,7 @@ public:
         } catch (const std::exception& e) {
             return common::VoidResult::err(
                 common::error_codes::INTERNAL_ERROR,
-                std::format("Monitoring adapter initialization failed: {}", e.what())
+                std::string("Monitoring adapter initialization failed: ") + e.what()
             );
         }
     }

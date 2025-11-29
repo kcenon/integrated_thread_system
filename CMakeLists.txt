@@ -240,26 +240,14 @@ else()
 endif()
 
 ##################################################
-# Optional Dependencies (fmt, nlohmann_json)
+# Optional Dependencies (nlohmann_json)
+# Note: fmt dependency removed - using C++20 std::format
 ##################################################
 
 if(USE_SYSTEM_DEPENDENCIES)
-    find_package(fmt REQUIRED)
     find_package(nlohmann_json REQUIRED)
 else()
     # Try to find packages first, fall back to FetchContent if not found
-    find_package(fmt CONFIG QUIET)
-    if(NOT fmt_FOUND)
-        message(STATUS "fmt not found, fetching from GitHub...")
-        FetchContent_Declare(
-            fmt
-            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-            GIT_TAG 10.1.1
-            GIT_SHALLOW TRUE
-        )
-        FetchContent_MakeAvailable(fmt)
-    endif()
-
     find_package(nlohmann_json CONFIG QUIET)
     if(NOT nlohmann_json_FOUND)
         message(STATUS "nlohmann_json not found, fetching from GitHub...")
@@ -457,15 +445,11 @@ endif()
 target_link_libraries(integrated_thread_system
     PUBLIC
         Threads::Threads
-    PRIVATE
-        fmt::fmt
 )
 
 target_link_libraries(integrated_thread_system_enhanced
     PUBLIC
         Threads::Threads
-    PRIVATE
-        fmt::fmt
 )
 
 # Link thread_system if available
@@ -707,7 +691,7 @@ message(STATUS "  common_system: ${common_system_FOUND}")
 message(STATUS "  thread_system: ${EXTERNAL_SYSTEMS_AVAILABLE}")
 message(STATUS "  logger_system: ${EXTERNAL_SYSTEMS_AVAILABLE}")
 message(STATUS "  monitoring_system: ${EXTERNAL_SYSTEMS_AVAILABLE}")
-message(STATUS "  fmt: ${fmt_FOUND}")
 message(STATUS "  nlohmann_json: ${nlohmann_json_FOUND}")
+message(STATUS "  Note: Using C++20 std::format (fmt library removed)")
 message(STATUS "========================================")
 message(STATUS "")

@@ -62,7 +62,10 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt update
-        sudo apt install -y cmake build-essential ninja-build gcc g++
+        sudo apt install -y software-properties-common
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo apt update
+        sudo apt install -y cmake build-essential ninja-build gcc-13 g++-13
         sudo apt install -y libgtest-dev libgmock-dev
         sudo apt install -y libfmt-dev nlohmann-json3-dev
 
@@ -125,13 +128,24 @@ jobs:
         mkdir -p build
         cd build
 
-        # Use default compiler (gcc on Linux, clang on macOS)
-        cmake .. \
-          -G Ninja \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_TESTS=ON \
-          -DBUILD_EXAMPLES=ON \
-          -DCMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        # Use gcc-13 on Linux for C++20 std::format support, clang on macOS
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          cmake .. \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTS=ON \
+            -DBUILD_EXAMPLES=ON \
+            -DCMAKE_C_COMPILER=gcc-13 \
+            -DCMAKE_CXX_COMPILER=g++-13 \
+            -DCMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        else
+          cmake .. \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTS=ON \
+            -DBUILD_EXAMPLES=ON \
+            -DCMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        fi
 
         cmake --build . --parallel
 
@@ -239,7 +253,10 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y cmake build-essential ninja-build gcc g++
+        sudo apt install -y software-properties-common
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo apt update
+        sudo apt install -y cmake build-essential ninja-build gcc-13 g++-13
         sudo apt install -y libgtest-dev libgmock-dev
         sudo apt install -y libfmt-dev nlohmann-json3-dev
 
@@ -249,6 +266,8 @@ jobs:
         cd build
         cmake .. \
           -G Ninja \
+          -DCMAKE_C_COMPILER=gcc-13 \
+          -DCMAKE_CXX_COMPILER=g++-13 \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTS=ON \
           -DBUILD_EXAMPLES=ON

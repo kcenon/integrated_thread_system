@@ -1,49 +1,110 @@
 /**
  * @file unified_thread_system.cpp
- * @brief Implementation of the Unified Thread System
+ * @brief Implementation of the Unified Thread System with thread_adapter integration
+ *
+ * This implementation uses thread_adapter to leverage thread_system v2.0.0 features:
+ * - typed_thread_pool for priority-based task execution
+ * - work-stealing for improved load balancing
+ * - service_registry for dependency injection
  */
 
-#include "unified_thread_system.h"
+#include <unified_thread_system.h>
+#include <kcenon/integrated/adapters/thread_adapter.h>
 #include <iostream>
 #include <memory>
 #include <future>
 #include <thread>
+#include <format>
 
-namespace integrated_thread_system {
+namespace kcenon::integrated {
 
 class unified_thread_system::impl {
 private:
     config config_;
+    std::unique_ptr<adapters::thread_adapter> thread_adapter_;
+    bool initialized_ = false;
 
 public:
     explicit impl(const config& cfg) : config_(cfg) {
-        // Simple initialization
-        std::cout << "Initializing unified_thread_system: " << cfg.name << std::endl;
+        initialize();
     }
 
     ~impl() {
-        // Graceful shutdown
-        std::cout << "Shutting down unified_thread_system" << std::endl;
+        shutdown();
     }
 
-    // Thread system operations - stub implementations
-    template<typename F, typename... Args>
-    auto submit(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
-        // Simple implementation using std::async for now
-        return std::async(std::launch::async, std::forward<F>(f), std::forward<Args>(args)...);
+    void initialize() {
+        if (initialized_) return;
+
+        // Create thread_config from unified config
+        thread_config thread_cfg;
+        thread_cfg.name = config_.name;
+        thread_cfg.pool_name = config_.name + "_pool";
+        thread_cfg.thread_count = config_.thread_count;
+        thread_cfg.enable_work_stealing = config_.enable_work_stealing;
+        thread_cfg.enable_service_registry = config_.enable_service_registry;
+        thread_cfg.enable_priority_scheduling = true;  // Enable for typed_thread_pool
+
+        // Create and initialize thread adapter
+        thread_adapter_ = std::make_unique<adapters::thread_adapter>(thread_cfg);
+        auto result = thread_adapter_->initialize();
+
+        if (result.is_ok()) {
+            initialized_ = true;
+            if (config_.enable_console_logging) {
+                std::cout << std::format("[INFO] unified_thread_system initialized: {} with {} workers\n",
+                    config_.name, worker_count());
+            }
+        } else {
+            if (config_.enable_console_logging) {
+                std::cerr << std::format("[ERROR] Failed to initialize thread system: {}\n",
+                    result.error().message);
+            }
+        }
     }
 
-    template<typename F, typename... Args>
-    auto submit_critical(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
-        return std::async(std::launch::async, std::forward<F>(f), std::forward<Args>(args)...);
+    void shutdown() {
+        if (!initialized_) return;
+
+        if (thread_adapter_) {
+            thread_adapter_->wait_for_completion();
+            thread_adapter_->shutdown();
+            thread_adapter_.reset();
+        }
+
+        initialized_ = false;
+        if (config_.enable_console_logging) {
+            std::cout << "[INFO] unified_thread_system shutdown complete\n";
+        }
     }
 
-    template<typename F, typename... Args>
-    auto submit_background(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
-        return std::async(std::launch::deferred, std::forward<F>(f), std::forward<Args>(args)...);
+    // Submit task with priority using thread_adapter
+    void submit_with_priority(int priority, std::function<void()> task) {
+        if (!initialized_ || !thread_adapter_) {
+            // Fallback to std::async if not initialized
+            std::thread([task = std::move(task)]() {
+                try {
+                    task();
+                } catch (...) {
+                    // Swallow exceptions
+                }
+            }).detach();
+            return;
+        }
+
+        auto result = thread_adapter_->execute_with_priority(priority, std::move(task));
+        if (result.is_err() && config_.enable_console_logging) {
+            std::cerr << std::format("[WARNING] Task submission failed: {}\n",
+                result.error().message);
+        }
     }
 
-    // Logger system operations - stub implementations
+    // Submit task without priority (uses default)
+    void submit_internal(std::function<void()> task) {
+        submit_with_priority(64, std::move(task));  // Default: normal priority
+    }
+
+    // Logger system operations
     void log_debug(const std::string& message) {
         if (config_.enable_console_logging) {
             std::cout << "[DEBUG] " << message << std::endl;
@@ -74,54 +135,53 @@ public:
         }
     }
 
-    // Monitor system operations - stub implementations
-    void register_metric(const std::string& name, int type) {
-        std::cout << "Registering metric: " << name << std::endl;
-    }
-
-    void increment_counter(const std::string& name, double value = 1.0) {
-        std::cout << "Incrementing counter: " << name << " by " << value << std::endl;
-    }
-
-    void set_gauge(const std::string& name, double value) {
-        std::cout << "Setting gauge: " << name << " to " << value << std::endl;
-    }
-
-    double get_counter(const std::string& name) const {
-        return 0.0;
-    }
-
+    // Monitor system operations
     performance_metrics get_system_metrics() const {
-        return performance_metrics{};
-    }
-
-    void register_health_check(const std::string& name, std::function<health_status()> check) {
-        std::cout << "Registering health check: " << name << std::endl;
+        performance_metrics metrics{};
+        if (thread_adapter_) {
+            metrics.active_workers = thread_adapter_->worker_count();
+            metrics.queue_size = thread_adapter_->queue_size();
+        }
+        return metrics;
     }
 
     health_status check_health() const {
-        return health_status{health_level::healthy, 0.0, 0.0, 0.0, {}};
-    }
-
-    performance_metrics get_performance_stats() const {
-        return performance_metrics{};
+        health_status status{};
+        status.overall_health = initialized_ ? health_level::healthy : health_level::failed;
+        if (thread_adapter_) {
+            status.queue_utilization_percent =
+                static_cast<double>(thread_adapter_->queue_size()) / 10000.0 * 100.0;
+        }
+        return status;
     }
 
     // Configuration operations
     void reconfigure(const config& new_config) {
+        shutdown();
         config_ = new_config;
-        std::cout << "Reconfigured system" << std::endl;
+        initialize();
     }
 
     config get_config() const {
         return config_;
     }
 
-    // Internal task submission
-    void submit_internal(std::function<void()> task) {
-        // Simple async execution for now - store future to avoid warning
-        auto future = std::async(std::launch::async, std::move(task));
-        // Let future destruct automatically
+    size_t worker_count() const {
+        return thread_adapter_ ? thread_adapter_->worker_count() : 0;
+    }
+
+    size_t queue_size() const {
+        return thread_adapter_ ? thread_adapter_->queue_size() : 0;
+    }
+
+    void wait_for_completion() {
+        if (thread_adapter_) {
+            thread_adapter_->wait_for_completion();
+        }
+    }
+
+    bool is_healthy() const {
+        return initialized_ && thread_adapter_ && thread_adapter_->is_initialized();
     }
 
     // Internal logging
@@ -152,7 +212,9 @@ unified_thread_system::unified_thread_system()
 
 unified_thread_system::~unified_thread_system() = default;
 
-// Thread system operations (explicit instantiations would go here)
+// Move operations
+unified_thread_system::unified_thread_system(unified_thread_system&&) = default;
+unified_thread_system& unified_thread_system::operator=(unified_thread_system&&) = default;
 
 // Public method implementations
 performance_metrics unified_thread_system::get_metrics() const {
@@ -164,24 +226,28 @@ health_status unified_thread_system::get_health() const {
 }
 
 void unified_thread_system::wait_for_completion() {
-    // Stub implementation
+    pimpl_->wait_for_completion();
 }
 
 size_t unified_thread_system::worker_count() const {
-    return pimpl_->get_config().thread_count;
+    return pimpl_->worker_count();
 }
 
 size_t unified_thread_system::queue_size() const {
-    return 0; // Stub implementation
+    return pimpl_->queue_size();
 }
 
 bool unified_thread_system::is_healthy() const {
-    return true; // Stub implementation
+    return pimpl_->is_healthy();
 }
 
 // Internal methods implementation
 void unified_thread_system::submit_internal(std::function<void()> task) {
     pimpl_->submit_internal(std::move(task));
+}
+
+void unified_thread_system::submit_internal_with_priority(int priority, std::function<void()> task) {
+    pimpl_->submit_with_priority(priority, std::move(task));
 }
 
 // Template method implementation
@@ -198,4 +264,4 @@ template void unified_thread_system::log<std::string>(log_level, const std::stri
 template void unified_thread_system::log<const char*>(log_level, const std::string&, const char*&&);
 template void unified_thread_system::log<size_t>(log_level, const std::string&, size_t&&);
 
-} // namespace integrated_thread_system
+} // namespace kcenon::integrated

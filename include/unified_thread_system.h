@@ -79,6 +79,29 @@ public:
         bool enable_monitoring = true;
         std::string log_directory = "./logs";
         log_level min_log_level = log_level::info;
+        bool enable_work_stealing = true;  // Enable work-stealing for better load balancing
+        bool enable_service_registry = true;  // Enable service registry for DI
+
+        // Builder pattern methods
+        config& set_worker_count(size_t count) {
+            thread_count = count;
+            return *this;
+        }
+
+        config& set_name(const std::string& n) {
+            name = n;
+            return *this;
+        }
+
+        config& set_log_level(log_level level) {
+            min_log_level = level;
+            return *this;
+        }
+
+        config& set_work_stealing(bool enable) {
+            enable_work_stealing = enable;
+            return *this;
+        }
     };
 
     /**
@@ -110,6 +133,32 @@ public:
      */
     template<typename F, typename... Args>
     auto submit(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>>;
+
+    /**
+     * @brief Submit a critical priority task (processed first)
+     *
+     * Uses typed_thread_pool's RealTime priority (96-127 range).
+     * Critical tasks are processed before normal and background tasks.
+     *
+     * @param f Function to execute
+     * @param args Arguments to pass to the function
+     * @return Future containing the result
+     */
+    template<typename F, typename... Args>
+    auto submit_critical(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>>;
+
+    /**
+     * @brief Submit a background priority task (processed last)
+     *
+     * Uses typed_thread_pool's Background priority (0-31 range).
+     * Background tasks yield to normal and critical tasks.
+     *
+     * @param f Function to execute
+     * @param args Arguments to pass to the function
+     * @return Future containing the result
+     */
+    template<typename F, typename... Args>
+    auto submit_background(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>>;
 
     /**
      * @brief Submit multiple tasks in batch
@@ -165,6 +214,7 @@ private:
 
     // Internal methods
     void submit_internal(std::function<void()> task);
+    void submit_internal_with_priority(int priority, std::function<void()> task);
     template<typename... Args>
     void log_internal(log_level level, const std::string& message, Args&&... args);
 };
@@ -180,8 +230,40 @@ auto unified_thread_system::submit(F&& f, Args&&... args) -> std::future<std::in
 
     auto result = task->get_future();
 
-    // Implementation will be in the .cpp file
-    submit_internal([task]() { (*task)(); });
+    // Normal priority (Batch: 32-95 range, using 64 as middle)
+    submit_internal_with_priority(64, [task]() { (*task)(); });
+
+    return result;
+}
+
+template<typename F, typename... Args>
+auto unified_thread_system::submit_critical(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
+    using return_type = std::invoke_result_t<F, Args...>;
+
+    auto task = std::make_shared<std::packaged_task<return_type()>>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+    );
+
+    auto result = task->get_future();
+
+    // Critical priority (RealTime: 96-127 range, using 120)
+    submit_internal_with_priority(120, [task]() { (*task)(); });
+
+    return result;
+}
+
+template<typename F, typename... Args>
+auto unified_thread_system::submit_background(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
+    using return_type = std::invoke_result_t<F, Args...>;
+
+    auto task = std::make_shared<std::packaged_task<return_type()>>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+    );
+
+    auto result = task->get_future();
+
+    // Background priority (Background: 0-31 range, using 16)
+    submit_internal_with_priority(16, [task]() { (*task)(); });
 
     return result;
 }

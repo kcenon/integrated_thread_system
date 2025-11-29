@@ -41,9 +41,9 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 ##################################################
 
 set(REQUIRED_COMMON_SYSTEM_VERSION "1.0.0")
-set(REQUIRED_THREAD_SYSTEM_VERSION "1.0.0")
+set(REQUIRED_THREAD_SYSTEM_VERSION "2.0.0")
 set(REQUIRED_LOGGER_SYSTEM_VERSION "1.0.0")
-set(REQUIRED_MONITORING_SYSTEM_VERSION "2.0.0")
+set(REQUIRED_MONITORING_SYSTEM_VERSION "4.0.0")
 
 message(STATUS "Dependency version requirements:")
 message(STATUS "  common_system >= ${REQUIRED_COMMON_SYSTEM_VERSION}")

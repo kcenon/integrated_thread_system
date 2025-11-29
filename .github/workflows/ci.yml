@@ -190,10 +190,8 @@ jobs:
         if (Test-Path build) { Remove-Item -Recurse -Force build }
         New-Item -ItemType Directory -Path build
 
-    - name: Build application (vcpkg - Unix)
+    - name: Build application (Unix)
       if: runner.os != 'Windows'
-      id: build_vcpkg_unix
-      continue-on-error: true
       run: |
         cd build
         # Set libc++ flags for clang on Linux to avoid GCC libstdc++ incompatibility
@@ -218,12 +216,9 @@ jobs:
           -DCMAKE_SHARED_LINKER_FLAGS="$LINKER_FLAGS"
 
         cmake --build . --parallel
-        ctest --output-on-failure
 
-    - name: Build application (vcpkg - Windows)
+    - name: Build application (Windows)
       if: runner.os == 'Windows'
-      id: build_vcpkg_windows
-      continue-on-error: true
       shell: pwsh
       run: |
         cd build
@@ -237,72 +232,19 @@ jobs:
           -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
 
         cmake --build . --config $env:BUILD_TYPE --parallel
+
+    - name: Run tests (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        cd build
+        ctest --output-on-failure
+
+    - name: Run tests (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        cd build
         ctest -C $env:BUILD_TYPE --output-on-failure
-
-    - name: Build application (fallback - Unix)
-      if: runner.os != 'Windows' && steps.build_vcpkg_unix.outcome != 'success'
-      run: |
-        echo "vcpkg build failed. Falling back to system libraries..."
-        rm -rf build
-        mkdir -p build
-        cd build
-
-        # Set libc++ flags for clang on Linux to avoid GCC libstdc++ incompatibility
-        if [ "${{ matrix.compiler }}" == "clang" ] && [ "${{ runner.os }}" == "Linux" ]; then
-          STDLIB_FLAGS="-stdlib=libc++"
-          LINKER_FLAGS="-stdlib=libc++ -lc++abi"
-        else
-          STDLIB_FLAGS=""
-          LINKER_FLAGS=""
-        fi
-
-        cmake .. \
-          -G Ninja \
-          -DBUILD_TESTS=ON \
-          -DBUILD_EXAMPLES=ON \
-          -DBUILD_INTEGRATED_AS_SUBMODULE=ON \
-          -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-          -DUSE_STD_FORMAT=ON \
-          -DCMAKE_C_COMPILER=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }} \
-          -DCMAKE_CXX_COMPILER=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }} \
-          -DCMAKE_CXX_FLAGS="$STDLIB_FLAGS" \
-          -DCMAKE_EXE_LINKER_FLAGS="$LINKER_FLAGS" \
-          -DCMAKE_SHARED_LINKER_FLAGS="$LINKER_FLAGS"
-
-        cmake --build . --parallel
-
-    - name: Build application (fallback - Windows)
-      if: runner.os == 'Windows' && steps.build_vcpkg_windows.outcome != 'success'
-      shell: pwsh
-      run: |
-        Write-Host "vcpkg build failed. Falling back to system libraries..."
-        if (Test-Path build) { Remove-Item -Recurse -Force build }
-        New-Item -ItemType Directory -Path build
-        cd build
-
-        cmake .. `
-          -G "Visual Studio 17 2022" `
-          -A x64 `
-          -DBUILD_TESTS=ON `
-          -DBUILD_EXAMPLES=ON `
-          -DBUILD_INTEGRATED_AS_SUBMODULE=ON `
-          -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE `
-          -DUSE_STD_FORMAT=ON
-
-        cmake --build . --config $env:BUILD_TYPE --parallel
-
-    - name: Run minimal test (fallback - Unix)
-      if: runner.os != 'Windows' && steps.build_vcpkg_unix.outcome != 'success'
-      run: |
-        cd build
-        echo "Build completed with system libraries (fallback mode)"
-
-    - name: Run minimal test (fallback - Windows)
-      if: runner.os == 'Windows' && steps.build_vcpkg_windows.outcome != 'success'
-      shell: pwsh
-      run: |
-        cd build
-        Write-Host "Build completed with system libraries (fallback mode)"
 
     - name: Upload test results
       if: always()

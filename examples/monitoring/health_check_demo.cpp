@@ -26,7 +26,7 @@
 
 using namespace kcenon::integrated;
 using namespace kcenon::integrated::adapters;
-using namespace kcenon::common;
+namespace common = kcenon::common;
 using namespace std::chrono_literals;
 
 // Simulated components for health checking

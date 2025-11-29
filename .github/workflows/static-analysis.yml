@@ -54,7 +54,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y cmake build-essential ninja-build clang clang-tidy lld libc++-dev libc++abi-dev
+        sudo apt install -y cmake build-essential ninja-build clang clang-tidy lld
         sudo apt install -y libgtest-dev libgmock-dev
         sudo apt install -y libfmt-dev nlohmann-json3-dev
 
@@ -69,10 +69,7 @@ jobs:
           -DBUILD_EXAMPLES=OFF \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
           -DCMAKE_C_COMPILER=clang \
-          -DCMAKE_CXX_COMPILER=clang++ \
-          -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-          -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -lc++abi" \
-          -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -lc++abi"
+          -DCMAKE_CXX_COMPILER=clang++
 
     - name: Build
       run: |

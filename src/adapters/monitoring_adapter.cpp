@@ -4,8 +4,11 @@
 
 #include <kcenon/integrated/adapters/monitoring_adapter.h>
 
-#include <format>
 #include <string>
+
+#if EXTERNAL_SYSTEMS_AVAILABLE
+#include <format>
+#endif
 
 #if EXTERNAL_SYSTEMS_AVAILABLE
 // Core monitoring components
@@ -407,7 +410,7 @@ public:
         result.status = all_healthy ? common::interfaces::health_status::healthy
                                     : common::interfaces::health_status::degraded;
         result.message = all_healthy ? "All health checks passed"
-                                     : std::format("{} health check(s) failed", failed_checks.size());
+                                     : std::to_string(failed_checks.size()) + " health check(s) failed";
 #endif
 
         return common::Result<common::interfaces::health_check_result>::ok(result);
@@ -600,12 +603,13 @@ public:
         } else {
             return common::Result<circuit_breaker_metrics>::err(
                 common::error_codes::NOT_FOUND,
-                std::format("Circuit breaker '{}' not found", name)
+                "Circuit breaker '" + name + "' not found"
             );
         }
 #else
+        (void)name;  // Suppress unused parameter warning
         return common::Result<circuit_breaker_metrics>::err(
-            common::error_codes::NOT_SUPPORTED,
+            common::error_codes::INTERNAL_ERROR,
             "Circuit breaker monitoring requires external monitoring_system"
         );
 #endif

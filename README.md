@@ -479,7 +479,7 @@ All platforms are tested via unified CI/CD pipeline using GitHub Actions matrix 
 | **Ubuntu 22.04** | GCC | 11+ | ✅ Fully Tested | Primary development platform |
 | **Ubuntu 22.04** | Clang | 14+ | ✅ Fully Tested | Full C++20 support |
 | **macOS 13** | Apple Clang | 14+ | ✅ Fully Tested | Intel and Apple Silicon (M1/M2/M3) |
-| **Windows 2022** | MSVC | 2019+ | ✅ Fully Tested | Visual Studio 2019/2022 |
+| **Windows 2022** | MSVC | 2022+ | ✅ Fully Tested | Visual Studio 2022 |
 | **Linux (Other)** | GCC/Clang | 11+/14+ | ✅ Expected | Should work on most modern distros |
 
 **CI/CD Status**: [![CI](https://github.com/kcenon/integrated_thread_system/actions/workflows/ci.yml/badge.svg)](https://github.com/kcenon/integrated_thread_system/actions/workflows/ci.yml)
@@ -503,7 +503,7 @@ All platforms are tested via unified CI/CD pipeline using GitHub Actions matrix 
 
 | Build System | Status | Notes |
 |--------------|--------|-------|
-| **CMake** | ✅ 3.16+ | Primary build system, full feature support |
+| **CMake** | ✅ 3.20+ | Primary build system, full feature support |
 | **vcpkg** | ✅ Supported | Package management via vcpkg.json |
 | **Conan** | ⚠️ Experimental | Community-maintained recipes |
 | **Bazel** | ❌ Not Supported | Contributions welcome |

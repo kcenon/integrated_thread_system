@@ -72,25 +72,25 @@ endif()
 # See .github/workflows/coverage.yml for coverage configuration
 
 # Create a target to run all tests
-add_custom_target(run_tests
+add_custom_target(integrated_run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
     DEPENDS all_tests
     COMMENT "Running all tests..."
 )
 
 # Create test groups
-add_custom_target(run_unit_tests
+add_custom_target(integrated_run_unit_tests
     COMMAND ${CMAKE_CTEST_COMMAND} -L "unit" --output-on-failure
     COMMENT "Running unit tests..."
 )
 
-add_custom_target(run_integration_tests
+add_custom_target(integrated_run_integration_tests
     COMMAND ${CMAKE_CTEST_COMMAND} -L "integration" --output-on-failure
     COMMENT "Running integration tests..."
 )
 
 if(INTEGRATED_BUILD_BENCHMARKS)
-    add_custom_target(run_benchmarks
+    add_custom_target(integrated_run_benchmarks
         COMMAND ${CMAKE_CTEST_COMMAND} -L "benchmark" --output-on-failure
         COMMENT "Running benchmarks..."
     )

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed - Test Infrastructure (Issue #69)
+- Refactored `test/test_unified_enhanced.cpp` to use polling-based synchronization
+  - Replaced control flow `sleep_for` calls with `wait_for_condition()` helper
+  - Preserves `sleep_for` inside task lambdas for work simulation (acceptable)
+  - Reduces potential test flakiness on busy CI runners
+  - Added proper timeout handling (500ms safety limits) with small polling intervals
+
 ### Added - System Updates (2025-11-12)
 - **Configuration Enhancements**
   - Thread system scheduler support (thread_system v1.0.0+)

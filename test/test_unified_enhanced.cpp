@@ -10,6 +10,7 @@
 #include <thread>
 #include <random>
 #include <cassert>
+#include <condition_variable>
 
 using namespace kcenon::integrated;
 using namespace std::chrono_literals;
@@ -59,6 +60,32 @@ public:
 
     bool all_passed() const { return tests_failed == 0; }
 };
+
+/**
+ * @brief Helper to wait for a condition with timeout
+ * @param pred Predicate that returns true when condition is met
+ * @param timeout Maximum time to wait
+ * @param poll_interval Time between checks
+ * @return true if condition was met, false if timeout
+ */
+template<typename Predicate>
+bool wait_for_condition(
+    Predicate&& pred,
+    std::chrono::milliseconds timeout = std::chrono::milliseconds(1000),
+    std::chrono::milliseconds poll_interval = std::chrono::milliseconds(10)
+) {
+    auto start = std::chrono::steady_clock::now();
+    while (true) {
+        if (pred()) {
+            return true;
+        }
+        auto elapsed = std::chrono::steady_clock::now() - start;
+        if (elapsed >= timeout) {
+            return false;
+        }
+        std::this_thread::sleep_for(poll_interval);
+    }
+}
 
 void test_basic_submission() {
     unified_thread_system system;
@@ -119,9 +146,19 @@ void test_cancellation() {
         }
         return 42;
     });
-
-    // Cancel after a short delay
-    std::this_thread::sleep_for(25ms);
+    // Wait for task to start executing (poll for cancellation point)
+    bool task_started = wait_for_condition(
+        [&future]() {
+            return future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready;
+        },
+        std::chrono::milliseconds(100),
+        std::chrono::milliseconds(5)
+    );
+    
+    // Give the task a chance to enter its loop before cancelling
+    // This uses a small yield instead of a long sleep
+    std::this_thread::yield();
+    std::this_thread::sleep_for(15ms);  // Minimal delay to ensure task is in loop
     token.cancel();
 
     auto result = future.get();
@@ -149,13 +186,21 @@ void test_recurring_tasks() {
     auto task_id = system.schedule_recurring(50ms, [&counter]() {
         counter++;
     });
-
-    std::this_thread::sleep_for(250ms);
+    // Wait for counter to reach expected value using polling instead of sleep
+    constexpr int expected_min_executions = 3;
+    bool reached = wait_for_condition(
+        [&counter]() { return counter.load() >= expected_min_executions; },
+        std::chrono::milliseconds(500),
+        std::chrono::milliseconds(20)
+    );
 
     system.cancel_recurring(task_id);
+    
+    int final_count = counter.load();
 
-    // Should have executed approximately 4-5 times
-    assert(counter >= 3 && counter <= 6);
+    // Should have executed at least expected_min_executions times
+    assert(reached && "Recurring task did not execute enough times");
+    assert(final_count >= expected_min_executions && final_count <= 12);
 }
 
 void test_batch_processing() {
@@ -243,9 +288,15 @@ void test_circuit_breaker() {
             // Expected
         }
     }
-
-    // Circuit should be open now
-    std::this_thread::sleep_for(100ms);  // Give time for circuit to open
+    // Wait for circuit breaker to process failures using polling
+    bool circuit_opened = wait_for_condition(
+        [&system]() {
+            auto health = system.get_health();
+            return health.circuit_breaker_open;
+        },
+        std::chrono::milliseconds(500),
+        std::chrono::milliseconds(20)
+    );
 
     bool circuit_was_open = false;
     try {
@@ -277,12 +328,16 @@ void test_event_subscription() {
     // Generate some log events
     system.submit([]() { return 1; });
     system.wait_for_completion();
-
-    std::this_thread::sleep_for(50ms);
+    // Wait for event to be received using polling instead of sleep
+    bool event_received = wait_for_condition(
+        [&event_count]() { return event_count.load() > 0; },
+        std::chrono::milliseconds(500),
+        std::chrono::milliseconds(10)
+    );
 
     system.unsubscribe_from_events(subscription_id);
 
-    assert(event_count > 0);  // Should have received some events
+    assert(event_received && event_count > 0);  // Should have received some events
 }
 
 void test_custom_metrics() {

@@ -52,15 +52,15 @@ This project is the **unified integration** of three specialized, battle-tested 
 | Component | Version | Status | Key Features |
 |-----------|---------|--------|--------------|
 | **common_system** | v2.0.0 | ✅ Required | Result<T>, standalone event bus, C++20 Concepts |
-| **thread_system** | v1.0.0 | ✅ Required | Scheduler, service registry, crash handler |
+| **thread_system** | v2.0.0 | ✅ Required | Scheduler, service registry, crash handler, C++20 Concepts |
 | **logger_system** | v1.0.0 | ✅ Required | Backend architecture, formatters, security |
-| **monitoring_system** | v2.0.0 | ✅ Required | Adaptive monitoring, health checks, reliability |
+| **monitoring_system** | v4.0.0 | ✅ Required | Adaptive monitoring, health checks, reliability, C++20 Concepts |
 
-> **Update 2025-11-12:** Configuration system updated to support latest features from all subsystems, including adaptive monitoring, scheduler support, and enhanced reliability features.
+> **Update 2025-12-10:** C++20 Concepts integration with `std::invocable` constraints. Dependency versions updated: common_system v2.0.0, thread_system v2.0.0, monitoring_system v4.0.0.
 
 ### Component Integration
 
-#### 1. **[thread_system](https://github.com/kcenon/thread_system)** - Concurrency Engine (v1.0.0)
+#### 1. **[thread_system](https://github.com/kcenon/thread_system)** - Concurrency Engine (v2.0.0)
 **What it provides:**
 - Lock-free thread pools (2.48M+ jobs/sec throughput)
 - Priority-based scheduling (RealTime, Batch, Background)
@@ -68,12 +68,13 @@ This project is the **unified integration** of three specialized, battle-tested 
 - Hazard pointer memory reclamation
 - Work-stealing architecture
 - Job cancellation support with cancellation tokens
+- **New in v2.0.0:** C++20 Concepts with `std::invocable` constraints
 
 **Integration:** Core threading primitives that power all async operations
 - Uses `thread_pool` and `typed_thread_pool` for task execution
 - Supports both standard and priority-based scheduling
 - Integrates cancellation tokens for graceful task termination
-- **New in v1.0.0:** Scheduler interface, crash handler (signal-safe recovery), service registry with DI container
+- **New in v2.0.0:** C++20 Concepts providing compile-time callable validation, improved error messages
 
 #### 2. **[logger_system](https://github.com/kcenon/logger_system)** - Observability (v1.0.0)
 **What it provides:**
@@ -89,7 +90,7 @@ This project is the **unified integration** of three specialized, battle-tested 
 - Supports all log levels with automatic conversion (trace through fatal)
 - **New in v1.0.0:** Backend architecture (integration/standalone/thread_system/monitoring), formatters (timestamp/JSON), security features (audit logger, path validator)
 
-#### 3. **[monitoring_system](https://github.com/kcenon/monitoring_system)** - Telemetry (v2.0.0)
+#### 3. **[monitoring_system](https://github.com/kcenon/monitoring_system)** - Telemetry (v4.0.0)
 **What it provides:**
 - Real-time performance metrics
 - Health check aggregation
@@ -97,13 +98,14 @@ This project is the **unified integration** of three specialized, battle-tested 
 - System resource monitoring (CPU, memory)
 - Custom metric collection
 - Statistical profiling (mean, p95, p99)
+- **New in v4.0.0:** C++20 Concepts with type-safe template constraints
 
 **Integration:** Live dashboards showing thread pool utilization, throughput, and system health
 - Uses `performance_profiler` for statistical analysis of operations
 - Integrates `system_monitor` for real-time CPU and memory tracking
 - Provides comprehensive metrics with mean duration, p95 latency, and call counts
 - Monitors system health with configurable thresholds (90% CPU/memory warnings)
-- **New in v2.0.0:** Adaptive monitoring (auto-adjust sampling based on load), health monitoring with configurable intervals, collectors (thread/logger/system resource/plugin), reliability features (error boundary, fault tolerance, retry policy)
+- **New in v4.0.0:** C++20 Concepts, adaptive monitoring (auto-adjust sampling based on load), health monitoring with configurable intervals, collectors (thread/logger/system resource/plugin), reliability features (error boundary, fault tolerance, retry policy)
 
 #### 4. **[common_system](https://github.com/kcenon/common_system)** - Foundation (v2.0.0)
 **What it provides:**

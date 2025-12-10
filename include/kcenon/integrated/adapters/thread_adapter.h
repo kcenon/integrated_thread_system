@@ -8,6 +8,10 @@
  *
  * Provides a common interface to thread_system's thread pool,
  * abstracting implementation details and enabling dependency injection.
+ *
+ * C++20 Concepts Support:
+ *   This header uses C++20 concepts from common_system for improved
+ *   compile-time type validation and clearer error messages.
  */
 
 #pragma once
@@ -15,6 +19,8 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <concepts>
+#include <iterator>
 #include <kcenon/common/patterns/result.h>
 #include <kcenon/integrated/core/configuration.h>
 
@@ -83,26 +89,32 @@ public:
 
     /**
      * @brief Submit a task and get a future
-     * @tparam F Function type
+     * @tparam F Function type (must be invocable with Args)
      * @tparam Args Argument types
      * @param f Function to execute
      * @param args Arguments to pass
      * @return Future containing the result
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename F, typename... Args>
+        requires std::invocable<F, Args...>
     auto submit(F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
     /**
      * @brief Submit a task with priority
-     * @tparam F Function type
+     * @tparam F Function type (must be invocable with Args)
      * @tparam Args Argument types
      * @param priority Priority level (0-127, higher = more important)
      * @param f Function to execute
      * @param args Arguments to pass
      * @return Future containing the result
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename F, typename... Args>
+        requires std::invocable<F, Args...>
     auto submit_with_priority(int priority, F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
@@ -161,23 +173,29 @@ public:
 
     /**
      * @brief Register a service in the service registry
-     * @tparam Interface Service interface type
-     * @tparam Implementation Service implementation type
+     * @tparam Interface Service interface type (must be polymorphic)
+     * @tparam Implementation Service implementation type (must derive from Interface)
      * @param name Service name for lookup
      * @param service Service instance
      * @return Result indicating success or error
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename Interface, typename Implementation>
+        requires std::is_base_of_v<Interface, Implementation> && std::is_polymorphic_v<Interface>
     common::VoidResult register_service(const std::string& name,
                                         std::shared_ptr<Implementation> service);
 
     /**
      * @brief Resolve a service from the registry
-     * @tparam Interface Service interface type
+     * @tparam Interface Service interface type (must be polymorphic)
      * @param name Service name
      * @return Result with service instance or error
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename Interface>
+        requires std::is_polymorphic_v<Interface>
     common::Result<std::shared_ptr<Interface>> resolve_service(const std::string& name);
 
     /**
@@ -209,14 +227,17 @@ public:
 
     /**
      * @brief Submit a cancellable task
-     * @tparam F Function type
+     * @tparam F Function type (must be invocable with Args)
      * @tparam Args Argument types
      * @param token Cancellation token
      * @param f Function to execute
      * @param args Arguments to pass
      * @return Future containing the result
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename F, typename... Args>
+        requires std::invocable<F, Args...>
     auto submit_cancellable(std::shared_ptr<void> token, F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
@@ -235,6 +256,7 @@ private:
 // Template implementations
 
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto thread_adapter::submit(F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>> {
     using return_type = std::invoke_result_t<F, Args...>;
@@ -251,6 +273,7 @@ auto thread_adapter::submit(F&& f, Args&&... args)
 }
 
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto thread_adapter::submit_with_priority(int priority, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>> {
     using return_type = std::invoke_result_t<F, Args...>;
@@ -270,6 +293,7 @@ auto thread_adapter::submit_with_priority(int priority, F&& f, Args&&... args)
 }
 
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto thread_adapter::submit_cancellable(std::shared_ptr<void> token, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>> {
     using return_type = std::invoke_result_t<F, Args...>;
@@ -302,6 +326,7 @@ auto thread_adapter::submit_cancellable(std::shared_ptr<void> token, F&& f, Args
 // Service Registry template implementations
 
 template<typename Interface, typename Implementation>
+    requires std::is_base_of_v<Interface, Implementation> && std::is_polymorphic_v<Interface>
 common::VoidResult thread_adapter::register_service(const std::string& name,
                                                      std::shared_ptr<Implementation> service) {
 #if EXTERNAL_SYSTEMS_AVAILABLE
@@ -328,6 +353,7 @@ common::VoidResult thread_adapter::register_service(const std::string& name,
 }
 
 template<typename Interface>
+    requires std::is_polymorphic_v<Interface>
 common::Result<std::shared_ptr<Interface>> thread_adapter::resolve_service(const std::string& name) {
 #if EXTERNAL_SYSTEMS_AVAILABLE
     try {

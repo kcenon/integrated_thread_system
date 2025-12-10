@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **C++20 Concepts Integration** (Issue #71)
+  - Updated common_system dependency from v1.0.0 to v2.0.0
+  - Added `std::invocable` constraints to all template functions for better compile-time validation
+  - Added local `VoidCallable` concept for void-returning callables
+  - Service registry methods use `std::is_base_of_v` and `std::is_polymorphic_v` constraints
+  - Benefits: Clearer error messages, better IDE support, self-documenting API
+
 ### Added
 - Documentation structure standardization
 - Korean documentation support

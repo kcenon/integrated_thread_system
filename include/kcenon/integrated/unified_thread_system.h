@@ -9,6 +9,10 @@
  *   unified_thread_system system;
  *   auto future = system.submit([]{ return 42; });
  *   auto result = future.get();
+ *
+ * C++20 Concepts Support:
+ *   This header uses C++20 concepts from common_system for improved
+ *   compile-time type validation and clearer error messages.
  */
 
 #pragma once
@@ -22,9 +26,20 @@
 #include <any>
 #include <atomic>
 #include <optional>
+#include <concepts>
+#include <iterator>
 #include <kcenon/integrated/core/configuration.h>
 
 namespace kcenon::integrated {
+
+/**
+ * @brief C++20 concept for void-returning callables
+ *
+ * A callable type that returns void when invoked with no arguments.
+ * Used for recurring tasks and fire-and-forget operations.
+ */
+template<typename F>
+concept VoidCallable = std::invocable<F> && std::is_void_v<std::invoke_result_t<F>>;
 
 /**
  * @brief Priority levels for task scheduling
@@ -168,11 +183,14 @@ public:
     /**
      * @brief Submit a task (matches original thread_system simplicity)
      *
-     * @param f Function to execute
+     * @param f Function to execute (must be invocable with provided args)
      * @param args Arguments to pass to the function
      * @return Future containing the result
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename F, typename... Args>
+        requires std::invocable<F, Args...>
     auto submit(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>>;
 
     /**
@@ -180,12 +198,15 @@ public:
      *
      * @param first Iterator to first element
      * @param last Iterator past last element
-     * @param func Function to apply to each element
+     * @param func Function to apply to each element (must be invocable with iterator value type)
      * @return Vector of futures containing results
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename Iterator, typename F>
+        requires std::invocable<F, typename std::iterator_traits<Iterator>::value_type>
     auto submit_batch(Iterator first, Iterator last, F&& func)
-        -> std::vector<std::future<std::invoke_result_t<F, typename Iterator::value_type>>>;
+        -> std::vector<std::future<std::invoke_result_t<F, typename std::iterator_traits<Iterator>::value_type>>>;
 
     /**
      * @brief Get current performance metrics
@@ -263,18 +284,23 @@ public:
 
     /**
      * @brief Enhanced task submission with priority
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename F, typename... Args>
+        requires std::invocable<F, Args...>
     auto submit_with_priority(priority_level priority, F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
     template<typename F, typename... Args>
+        requires std::invocable<F, Args...>
     auto submit_critical(F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>> {
         return submit_with_priority(priority_level::critical, std::forward<F>(f), std::forward<Args>(args)...);
     }
 
     template<typename F, typename... Args>
+        requires std::invocable<F, Args...>
     auto submit_background(F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>> {
         return submit_with_priority(priority_level::low, std::forward<F>(f), std::forward<Args>(args)...);
@@ -294,29 +320,40 @@ public:
 
     /**
      * @brief Cancellable task submission
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename F, typename... Args>
+        requires std::invocable<F, Args...>
     auto submit_cancellable(cancellation_token& token, F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
     /**
      * @brief Cancellable task submission with thread_system integration
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename F, typename... Args>
+        requires std::invocable<F, Args...>
     auto submit_cancellable(std::shared_ptr<void> token, F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
     /**
      * @brief Scheduled task submission
+     *
+     * @note Uses C++20 concepts for compile-time validation
      */
     template<typename F, typename... Args>
+        requires std::invocable<F, Args...>
     auto schedule(std::chrono::milliseconds delay, F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
     /**
      * @brief Recurring task submission
+     *
+     * @note Uses C++20 VoidCallable concept for validation
      */
-    template<typename F>
+    template<VoidCallable F>
     size_t schedule_recurring(std::chrono::milliseconds interval, F&& f);
 
     void cancel_recurring(size_t task_id);
@@ -377,6 +414,7 @@ private:
 
 // Template implementations
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto unified_thread_system::submit(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
     using return_type = std::invoke_result_t<F, Args...>;
 
@@ -393,6 +431,7 @@ auto unified_thread_system::submit(F&& f, Args&&... args) -> std::future<std::in
 }
 
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto unified_thread_system::submit_with_priority(priority_level priority, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>> {
     using return_type = std::invoke_result_t<F, Args...>;
@@ -410,6 +449,7 @@ auto unified_thread_system::submit_with_priority(priority_level priority, F&& f,
 }
 
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto unified_thread_system::submit_cancellable(cancellation_token& token, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>> {
     using return_type = std::invoke_result_t<F, Args...>;
@@ -434,6 +474,7 @@ auto unified_thread_system::submit_cancellable(cancellation_token& token, F&& f,
 }
 
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto unified_thread_system::submit_cancellable(std::shared_ptr<void> token, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>> {
     using return_type = std::invoke_result_t<F, Args...>;
@@ -450,6 +491,7 @@ auto unified_thread_system::submit_cancellable(std::shared_ptr<void> token, F&& 
 }
 
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto unified_thread_system::schedule(std::chrono::milliseconds delay, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>> {
     using return_type = std::invoke_result_t<F, Args...>;
@@ -465,16 +507,17 @@ auto unified_thread_system::schedule(std::chrono::milliseconds delay, F&& f, Arg
     return result;
 }
 
-template<typename F>
+template<VoidCallable F>
 size_t unified_thread_system::schedule_recurring(std::chrono::milliseconds interval, F&& f) {
     return schedule_recurring_internal(interval, std::forward<F>(f));
 }
 
 template<typename Iterator, typename F>
+    requires std::invocable<F, typename std::iterator_traits<Iterator>::value_type>
 auto unified_thread_system::submit_batch(Iterator first, Iterator last, F&& func)
-    -> std::vector<std::future<std::invoke_result_t<F, typename Iterator::value_type>>> {
+    -> std::vector<std::future<std::invoke_result_t<F, typename std::iterator_traits<Iterator>::value_type>>> {
 
-    std::vector<std::future<std::invoke_result_t<F, typename Iterator::value_type>>> futures;
+    std::vector<std::future<std::invoke_result_t<F, typename std::iterator_traits<Iterator>::value_type>>> futures;
 
     for (auto it = first; it != last; ++it) {
         futures.push_back(submit(func, *it));

@@ -51,7 +51,7 @@ This project is the **unified integration** of three specialized, battle-tested 
 
 | Component | Version | Status | Key Features |
 |-----------|---------|--------|--------------|
-| **common_system** | v1.0.0 | ✅ Required | Result<T>, standalone event bus |
+| **common_system** | v2.0.0 | ✅ Required | Result<T>, standalone event bus, C++20 Concepts |
 | **thread_system** | v1.0.0 | ✅ Required | Scheduler, service registry, crash handler |
 | **logger_system** | v1.0.0 | ✅ Required | Backend architecture, formatters, security |
 | **monitoring_system** | v2.0.0 | ✅ Required | Adaptive monitoring, health checks, reliability |
@@ -105,7 +105,7 @@ This project is the **unified integration** of three specialized, battle-tested 
 - Monitors system health with configurable thresholds (90% CPU/memory warnings)
 - **New in v2.0.0:** Adaptive monitoring (auto-adjust sampling based on load), health monitoring with configurable intervals, collectors (thread/logger/system resource/plugin), reliability features (error boundary, fault tolerance, retry policy)
 
-#### 4. **[common_system](https://github.com/kcenon/common_system)** - Foundation (v1.0.0)
+#### 4. **[common_system](https://github.com/kcenon/common_system)** - Foundation (v2.0.0)
 **What it provides:**
 - `Result<T>` error handling pattern
 - `IExecutor` interface abstraction
@@ -113,8 +113,9 @@ This project is the **unified integration** of three specialized, battle-tested 
 - Cross-platform utilities
 - Design pattern implementations
 - **New in v1.0.0:** Standalone event bus (no monitoring_system dependency), namespace `kcenon::common`, smart adapters, typed adapters
+- **New in v2.0.0:** C++20 Concepts support (`std::invocable` constraints), improved compile-time type validation
 
-**Integration:** Foundation layer ensuring consistent interfaces and error handling
+**Integration:** Foundation layer ensuring consistent interfaces and error handling with C++20 Concepts for better compile-time diagnostics
 
 ### Dependency Flow
 

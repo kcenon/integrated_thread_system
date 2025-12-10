@@ -8,10 +8,10 @@ This document provides a comprehensive version compatibility matrix for `integra
 
 | Component | Required Version | Status | Repository |
 |-----------|-----------------|--------|------------|
-| **common_system** | v1.0.0+ | ✅ Stable | [kcenon/common_system](https://github.com/kcenon/common_system) |
-| **thread_system** | v1.0.0+ | ✅ Stable | [kcenon/thread_system](https://github.com/kcenon/thread_system) |
+| **common_system** | v2.0.0+ | ✅ Stable | [kcenon/common_system](https://github.com/kcenon/common_system) |
+| **thread_system** | v2.0.0+ | ✅ Stable | [kcenon/thread_system](https://github.com/kcenon/thread_system) |
 | **logger_system** | v1.0.0+ | ✅ Stable | [kcenon/logger_system](https://github.com/kcenon/logger_system) |
-| **monitoring_system** | v2.0.0+ | ✅ Stable | [kcenon/monitoring_system](https://github.com/kcenon/monitoring_system) |
+| **monitoring_system** | v4.0.0+ | ✅ Stable | [kcenon/monitoring_system](https://github.com/kcenon/monitoring_system) |
 
 > **Note**: The "+" indicates that the system is compatible with the specified version and all patch versions within the same major.minor version (e.g., v1.0.0, v1.0.1, v1.0.2, etc.).
 
@@ -23,10 +23,13 @@ This document provides a comprehensive version compatibility matrix for `integra
 
 | Version | Features | integrated_thread_system Support |
 |---------|----------|----------------------------------|
-| **v1.0.0** | Thread pool, typed thread pool, job queue, scheduler interface, service registry, crash handler, hazard pointer support | ✅ Fully Supported |
-| v0.9.x | Thread pool, job queue (no scheduler, no service registry) | ⚠️ Legacy (not recommended) |
+| **v2.0.0** | Thread pool, typed thread pool, job queue, scheduler interface, service registry, crash handler, hazard pointer support, C++20 Concepts | ✅ Fully Supported |
+| v1.0.0 | Thread pool, typed thread pool, job queue, scheduler interface, service registry, crash handler | ⚠️ Legacy (upgrade recommended) |
+| v0.9.x | Thread pool, job queue (no scheduler, no service registry) | ❌ Not Supported |
 
-**Key Features in v1.0.0**:
+**Key Features in v2.0.0**:
+- C++20 Concepts with `std::invocable` constraints
+- Thread pool, typed thread pool, job queue
 - Scheduler interface for advanced task scheduling
 - Service registry with dependency injection container
 - Signal-safe crash handler for production robustness
@@ -50,10 +53,13 @@ This document provides a comprehensive version compatibility matrix for `integra
 
 | Version | Features | integrated_thread_system Support |
 |---------|----------|----------------------------------|
-| **v2.0.0** | Adaptive monitoring, health checks, reliability features (error boundary, fault tolerance, retry policy) | ✅ Fully Supported |
-| v1.0.x | Performance profiler, system monitor (no adaptive features) | ⚠️ Partial (basic metrics only) |
+| **v4.0.0** | Adaptive monitoring, health checks, reliability features (error boundary, fault tolerance, retry policy), C++20 Concepts | ✅ Fully Supported |
+| v3.0.x | Adaptive monitoring, health checks, reliability features | ⚠️ Legacy (upgrade recommended) |
+| v2.0.x | Adaptive monitoring, health checks | ⚠️ Legacy (upgrade recommended) |
+| v1.0.x | Performance profiler, system monitor (no adaptive features) | ❌ Not Supported |
 
-**Key Features in v2.0.0**:
+**Key Features in v4.0.0**:
+- **C++20 Concepts**: Type-safe template constraints
 - **Adaptive Monitoring**: Automatically adjusts sampling rate based on system load
   - Low load (< 30%): Sample every 5 seconds
   - High load (> 70%): Sample every 100ms
@@ -72,10 +78,12 @@ This document provides a comprehensive version compatibility matrix for `integra
 
 | Version | Features | integrated_thread_system Support |
 |---------|----------|----------------------------------|
-| **v1.0.0** | Result<T> pattern, standalone event bus, error codes | ✅ Fully Supported |
-| v0.9.x | Result<T> pattern only (no standalone event bus) | ⚠️ Legacy (not recommended) |
+| **v2.0.0** | Result<T> pattern, standalone event bus, error codes, C++20 Concepts | ✅ Fully Supported |
+| v1.0.0 | Result<T> pattern, standalone event bus, error codes | ⚠️ Legacy (upgrade recommended) |
+| v0.9.x | Result<T> pattern only (no standalone event bus) | ❌ Not Supported |
 
-**Key Features in v1.0.0**:
+**Key Features in v2.0.0**:
+- **C++20 Concepts**: Type-safe template constraints
 - Standalone event bus (decoupled from messaging_system)
 - Enhanced Result<T> pattern with error chaining
 - Standardized error codes across all systems
@@ -88,10 +96,35 @@ This document provides a comprehensive version compatibility matrix for `integra
 
 | Release | Date | thread_system | logger_system | monitoring_system | common_system | Notes |
 |---------|------|---------------|---------------|-------------------|---------------|-------|
-| **v2.0.0** | 2025-11-12 | v1.0.0 | v1.0.0 | v2.0.0 | v1.0.0 | Current release with adaptive monitoring |
+| **v2.1.0** | 2025-12-10 | v2.0.0 | v1.0.0 | v4.0.0 | v2.0.0 | C++20 Concepts integration, updated dependencies |
+| v2.0.0 | 2025-11-12 | v1.0.0 | v1.0.0 | v2.0.0 | v1.0.0 | Adaptive monitoring release |
 | v1.0.0 | 2025-10-XX | v0.9.x | v0.9.x | v1.0.x | v0.9.x | Initial unified system release |
 
 ### Upgrade Paths
+
+#### From v2.0.0 to v2.1.0 (Current)
+
+**Dependency Updates Required**:
+1. **thread_system v1.0.0 → v2.0.0**
+   - **Breaking Changes**: Template functions now use `requires` clauses with `std::invocable`
+   - **Migration**: Ensure callable types satisfy `std::invocable` concept
+   - **Backward Compatibility**: Well-formed callables work without changes
+
+2. **common_system v1.0.0 → v2.0.0**
+   - **Breaking Changes**: Added C++20 Concepts support
+   - **Migration**: Minimal changes required for most users
+   - **Backward Compatibility**: Result<T> API unchanged
+
+3. **monitoring_system v2.0.0 → v4.0.0**
+   - **Breaking Changes**: Major version bump with C++20 Concepts
+   - **Migration**: Update to latest API signatures
+   - **Backward Compatibility**: Core monitoring APIs remain stable
+
+**Recommended Upgrade Steps**:
+1. Ensure C++20 compiler support
+2. Update all dependencies to latest versions
+3. Verify callable types satisfy `std::invocable` concept
+4. Test thoroughly in staging environment
 
 #### From v1.0.0 to v2.0.0
 
@@ -132,10 +165,10 @@ The `CMakeLists.txt` uses pinned Git tags for reproducible builds:
 
 ```cmake
 # Pinned versions in CMakeLists.txt
-set(REQUIRED_COMMON_SYSTEM_VERSION "1.0.0")
-set(REQUIRED_THREAD_SYSTEM_VERSION "1.0.0")
+set(REQUIRED_COMMON_SYSTEM_VERSION "2.0.0")
+set(REQUIRED_THREAD_SYSTEM_VERSION "2.0.0")
 set(REQUIRED_LOGGER_SYSTEM_VERSION "1.0.0")
-set(REQUIRED_MONITORING_SYSTEM_VERSION "2.0.0")
+set(REQUIRED_MONITORING_SYSTEM_VERSION "4.0.0")
 
 # FetchContent uses these tags
 FetchContent_Declare(
@@ -154,7 +187,7 @@ If using vcpkg, specify versions in `vcpkg.json`:
   "dependencies": [
     {
       "name": "thread-system",
-      "version>=": "1.0.0"
+      "version>=": "2.0.0"
     },
     {
       "name": "logger-system",
@@ -162,11 +195,11 @@ If using vcpkg, specify versions in `vcpkg.json`:
     },
     {
       "name": "monitoring-system",
-      "version>=": "2.0.0"
+      "version>=": "4.0.0"
     },
     {
       "name": "common-system",
-      "version>=": "1.0.0"
+      "version>=": "2.0.0"
     }
   ]
 }
@@ -272,10 +305,10 @@ cmake -B build 2>&1 | grep "version requirements"
 Expected output:
 ```
 -- Dependency version requirements:
---   common_system >= 1.0.0
---   thread_system >= 1.0.0
+--   common_system >= 2.0.0
+--   thread_system >= 2.0.0
 --   logger_system >= 1.0.0
---   monitoring_system >= 2.0.0
+--   monitoring_system >= 4.0.0
 ```
 
 ---
@@ -289,7 +322,7 @@ Expected output:
 
 ---
 
-**Document Version**: 1.0.0
-**Last Updated**: 2025-11-16
+**Document Version**: 2.0.0
+**Last Updated**: 2025-12-10
 **Maintained By**: kcenon
 

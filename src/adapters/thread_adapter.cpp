@@ -13,7 +13,7 @@
 #include <kcenon/thread/core/job_types.h>
 #include <kcenon/thread/core/cancellation_token.h>
 #include <kcenon/thread/interfaces/thread_context.h>
-#include <kcenon/thread/core/../../../../src/impl/typed_pool/callback_typed_job.h>
+#include <kcenon/thread/impl/typed_pool/callback_typed_job.h>
 
 // New adapters and features (thread_system v1.0.0+)
 // #include <kcenon/thread/adapters/common_system_executor_adapter.h>

@@ -40,7 +40,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 # Dependency Version Requirements
 ##################################################
 
-set(REQUIRED_COMMON_SYSTEM_VERSION "1.0.0")
+set(REQUIRED_COMMON_SYSTEM_VERSION "2.0.0")
 set(REQUIRED_THREAD_SYSTEM_VERSION "2.0.0")
 set(REQUIRED_LOGGER_SYSTEM_VERSION "1.0.0")
 set(REQUIRED_MONITORING_SYSTEM_VERSION "4.0.0")
@@ -126,7 +126,7 @@ if(BUILD_WITH_COMMON_SYSTEM)
             FetchContent_Declare(
                 common_system
                 GIT_REPOSITORY https://github.com/kcenon/common_system.git
-                GIT_TAG        v${REQUIRED_COMMON_SYSTEM_VERSION}
+                GIT_TAG        main
                 GIT_SHALLOW    TRUE
                 GIT_PROGRESS   TRUE
             )

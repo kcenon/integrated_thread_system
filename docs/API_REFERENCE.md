@@ -1,12 +1,87 @@
 # API Reference
 
 ## Table of Contents
+- [C++20 Concepts Support](#c20-concepts-support)
 - [Core Classes](#core-classes)
 - [Configuration](#configuration)
 - [Task Submission](#task-submission)
 - [Enhanced Features](#enhanced-features)
 - [Monitoring & Metrics](#monitoring--metrics)
 - [Utility Types](#utility-types)
+
+## C++20 Concepts Support
+
+Starting with v2.1.0, `integrated_thread_system` uses C++20 Concepts for improved compile-time type validation and clearer error messages.
+
+### `std::invocable` Constraint
+
+All task submission functions use `std::invocable` to validate callable types at compile time:
+
+```cpp
+template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
+auto submit(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>>;
+```
+
+**Benefits:**
+- **Compile-time validation**: Invalid callables are caught during compilation, not at runtime
+- **Clearer error messages**: Instead of template instantiation failures deep in the implementation, you get clear constraint violation messages
+- **IDE support**: Modern IDEs can better understand and validate your code
+
+**Example of improved error messages:**
+```cpp
+// Before C++20 Concepts (confusing error)
+// error: no matching function for call to 'invoke'
+//        in instantiation of function template...
+
+// With C++20 Concepts (clear error)
+// error: constraints not satisfied for 'submit'
+// note: because 'std::invocable<int, void>' evaluated to false
+```
+
+### `VoidCallable` Concept
+
+A custom concept for void-returning callables, used for recurring tasks:
+
+```cpp
+template<typename F>
+concept VoidCallable = std::invocable<F> && std::is_void_v<std::invoke_result_t<F>>;
+```
+
+**Used in:**
+- `schedule_recurring(interval, f)` - Requires a callable that returns void
+
+**Example:**
+```cpp
+// Valid - returns void
+system.schedule_recurring(1000ms, []() { update_stats(); });
+
+// Invalid - returns int (compile error)
+system.schedule_recurring(1000ms, []() { return 42; });
+// error: constraints not satisfied for 'schedule_recurring'
+// note: because 'VoidCallable<lambda>' evaluated to false
+```
+
+### Service Registry Type Constraints
+
+The service registry uses additional type constraints:
+
+```cpp
+template<typename Service>
+    requires std::is_base_of_v<IService, Service> && std::is_polymorphic_v<Service>
+void register_service(std::shared_ptr<Service> service);
+```
+
+This ensures only valid service types can be registered.
+
+### Compile-Time Benefits
+
+| Feature | Without Concepts | With Concepts |
+|---------|-----------------|---------------|
+| Error detection | Runtime or deep template errors | Compile-time constraint failures |
+| Error messages | Cryptic template instantiation errors | Clear constraint violation messages |
+| IDE support | Limited | Full IntelliSense/autocomplete |
+| Documentation | Implicit requirements | Self-documenting constraints |
 
 ## Core Classes
 
@@ -76,9 +151,10 @@ struct config {
 #### `submit`
 ```cpp
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto submit(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>>;
 ```
-Submits a task for asynchronous execution.
+Submits a task for asynchronous execution. Uses C++20 `std::invocable` concept for compile-time validation.
 
 **Parameters:**
 - `f`: Function or callable object to execute
@@ -97,10 +173,11 @@ int result = future.get();  // 42
 #### `submit_batch`
 ```cpp
 template<typename Iterator, typename F>
+    requires std::invocable<F, typename std::iterator_traits<Iterator>::value_type>
 auto submit_batch(Iterator first, Iterator last, F&& func)
-    -> std::vector<std::future<std::invoke_result_t<F, typename Iterator::value_type>>>;
+    -> std::vector<std::future<std::invoke_result_t<F, typename std::iterator_traits<Iterator>::value_type>>>;
 ```
-Processes multiple items in parallel.
+Processes multiple items in parallel. Uses C++20 concepts to validate that the function is invocable with the iterator's value type.
 
 **Parameters:**
 - `first`, `last`: Iterator range of items to process
@@ -122,26 +199,29 @@ auto futures = system.submit_batch(data.begin(), data.end(),
 #### `submit_with_priority`
 ```cpp
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto submit_with_priority(priority_level priority, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>>;
 ```
-Submits a task with specified priority.
+Submits a task with specified priority. Uses C++20 `std::invocable` concept for compile-time validation.
 
 #### `submit_critical`
 ```cpp
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto submit_critical(F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>>;
 ```
-Submits a high-priority task.
+Submits a high-priority task. Uses C++20 `std::invocable` concept for compile-time validation.
 
 #### `submit_background`
 ```cpp
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto submit_background(F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>>;
 ```
-Submits a low-priority background task.
+Submits a low-priority background task. Uses C++20 `std::invocable` concept for compile-time validation.
 
 ### Cancellation Support
 
@@ -165,10 +245,11 @@ Cancels a previously created token, signaling all associated tasks to stop.
 #### `submit_cancellable`
 ```cpp
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto submit_cancellable(std::shared_ptr<void> token, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>>;
 ```
-Submits a task that can be cancelled via the provided token.
+Submits a task that can be cancelled via the provided token. Uses C++20 `std::invocable` concept for compile-time validation.
 
 **Parameters:**
 - `token`: Cancellation token from `create_cancellation_token()`
@@ -210,17 +291,18 @@ try {
 #### `schedule`
 ```cpp
 template<typename F, typename... Args>
+    requires std::invocable<F, Args...>
 auto schedule(std::chrono::milliseconds delay, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>>;
 ```
-Schedules a task to run after a delay.
+Schedules a task to run after a delay. Uses C++20 `std::invocable` concept for compile-time validation.
 
 #### `schedule_recurring`
 ```cpp
-template<typename F>
+template<VoidCallable F>
 size_t schedule_recurring(std::chrono::milliseconds interval, F&& f);
 ```
-Schedules a task to run repeatedly at intervals.
+Schedules a task to run repeatedly at intervals. Uses the custom `VoidCallable` concept to ensure the callable returns void.
 
 **Returns:** Task ID for cancellation
 

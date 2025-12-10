@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed - C++20 Concepts Integration (Issue #71)
+- Updated common_system dependency from v1.0.0 to v2.0.0
+- Added C++20 Concepts support for improved compile-time type validation:
+  - `unified_thread_system.h`: Added `std::invocable` constraints to all template functions
+    - `submit()`, `submit_batch()`, `submit_with_priority()`, `submit_critical()`, `submit_background()`
+    - `submit_cancellable()` (both overloads), `schedule()`, `schedule_recurring()`
+  - `thread_adapter.h`: Added `std::invocable` constraints for task submission templates
+  - Added local `VoidCallable` concept for void-returning callables
+  - Service registry methods use `std::is_base_of_v` and `std::is_polymorphic_v` constraints
+- Benefits:
+  - Clearer compile-time error messages when type requirements are not met
+  - Better IDE support with concept-aware autocomplete
+  - Self-documenting API with explicit type requirements
+- Fixed include path for `callback_typed_job.h` in thread_adapter.cpp
+
 ### Changed - Test Infrastructure (Issue #69)
 - Refactored `test/test_unified_enhanced.cpp` to use polling-based synchronization
   - Replaced control flow `sleep_for` calls with `wait_for_condition()` helper

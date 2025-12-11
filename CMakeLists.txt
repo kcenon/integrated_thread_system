@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(integrated_thread_system
-    VERSION 1.0.0
+    VERSION 0.1.0.0
     DESCRIPTION "Enterprise-grade unified threading framework with logging and monitoring"
     LANGUAGES CXX
 )

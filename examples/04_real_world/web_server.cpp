@@ -1,6 +1,6 @@
 /**
  * @file web_server.cpp
- * @brief Production-ready web server using the Integrated Thread System
+ * @brief Web server example using the Integrated Thread System
  * @author kcenon <kcenon@gmail.com>
  * @date 2024
  *
@@ -92,7 +92,7 @@ struct http_response {
  * @class web_server
  * @brief High-performance web server implementation
  *
- * @details This class implements a production-ready web server with advanced
+ * @details This class implements a web server example with advanced
  * features like caching, rate limiting, and priority-based request handling.
  * It leverages the Integrated Thread System for concurrent request processing.
  *

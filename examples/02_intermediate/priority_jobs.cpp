@@ -294,7 +294,7 @@ int main() {
  *
  * @par Next Steps
  * - Explore @ref custom_priorities.cpp for fine-grained priority control
- * - See @ref web_server.cpp for production-ready priority implementation
+ * - See @ref web_server.cpp for advanced priority implementation
  * - Review @ref monitoring_example.cpp for priority-based monitoring
  *
  * @see unified_thread_system::submit_critical()
